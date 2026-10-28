@@ -19,3 +19,21 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* PWA Mobile Optimization & Safe Area Insets */
+.h-safe-area-inset-bottom {
+  height: env(safe-area-inset-bottom, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Prevent unwanted pull-to-refresh bouncing in standalone app mode */
+html, body {
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
