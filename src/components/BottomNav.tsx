@@ -101,7 +101,7 @@ export default function BottomNav() {
   const items = isManager ? managerNavItems : staffNavItems
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 md:hidden shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200/80 md:hidden shadow-lg select-none pb-safe">
       <div className="flex items-center justify-around h-16 px-2 max-w-md mx-auto">
         {items.map(({ href, label, Icon }) => {
           const active = pathname === href || (href !== '/staff/dashboard' && href !== '/manager/dashboard' && pathname.startsWith(href))
@@ -110,7 +110,7 @@ export default function BottomNav() {
               key={href}
               href={href}
               prefetch={true}
-              className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] px-2 py-1.5 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] px-2 py-1.5 rounded-xl transition-all active:scale-95 ${
                 active ? 'text-[#e85d04]' : 'text-gray-500'
               }`}
             >
@@ -124,7 +124,6 @@ export default function BottomNav() {
           )
         })}
       </div>
-      <div className="h-safe-area-inset-bottom" />
     </nav>
   )
 }

@@ -85,12 +85,12 @@ export default function ReportsClient({ initialTransactions }: Props) {
       {/* Branded Audit Ledger Header */}
       <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="relative h-11 w-32 shrink-0">
+          <div className="relative h-11 w-11 shrink-0">
             <Image
-              src="/chebong-logo.png"
-              alt="Chè Bông Logo"
+              src="/chebong-bowl.png"
+              alt="CB Inventory Logo"
               fill
-              className="object-contain object-left"
+              className="object-contain"
               priority
             />
           </div>

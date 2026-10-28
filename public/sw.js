@@ -5,6 +5,7 @@ const PRECACHE_ASSETS = [
   '/',
   '/staff/dashboard',
   '/manifest.json',
+  '/chebong-bowl.png',
   '/chebong-logo.png',
   '/icon.png',
   '/apple-touch-icon.png',

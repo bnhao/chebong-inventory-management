@@ -3,14 +3,14 @@ import './globals.css'
 import PwaRegister from '@/components/PwaRegister'
 
 export const metadata: Metadata = {
-  title: 'Chè Bông – Inventory Management',
+  title: 'CB Inventory',
   description: 'Smart Inventory & Operations Management System for Chè Bông Dessert & Snacks',
-  applicationName: 'Chè Bông Inventory',
+  applicationName: 'CB Inventory',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Chè Bông',
+    title: 'CB Inventory',
   },
   formatDetection: {
     telephone: false,

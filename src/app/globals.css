@@ -20,7 +20,7 @@ body {
   scrollbar-width: none;
 }
 
-/* PWA Mobile Optimization & Safe Area Insets */
+/* Native App Look & Feel & Safe Area Insets */
 .h-safe-area-inset-bottom {
   height: env(safe-area-inset-bottom, 0px);
 }
@@ -31,9 +31,18 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Prevent unwanted pull-to-refresh bouncing in standalone app mode */
+/* Prevent unwanted browser elastic bounces, tap highlights, and text callouts */
 html, body {
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Allow normal text selection inside input fields and textareas */
+input, textarea, [contenteditable="true"], .selectable-text {
+  user-select: text;
+  -webkit-user-select: text;
 }
 

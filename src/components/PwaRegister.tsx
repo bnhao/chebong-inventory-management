@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -97,24 +98,29 @@ export default function PwaRegister() {
   }
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:max-w-sm z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="bg-gray-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-gray-800 flex items-center justify-between gap-3">
+    <div className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:max-w-md z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="bg-gray-900/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-gray-800 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#e85d04] flex items-center justify-center font-black text-white shrink-0 text-sm shadow-md">
-            C
+          <div className="relative w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 shadow-md">
+            <Image
+              src="/chebong-bowl.png"
+              alt="CB Inventory"
+              fill
+              className="object-contain p-1"
+            />
           </div>
           <div className="text-left">
             <h4 className="text-xs font-bold text-white tracking-wide">
-              Install Chè Bông App
+              Install CB Inventory App
             </h4>
             <p className="text-[11px] text-gray-300 leading-tight">
               {isIOS ? (
                 <span>
-                  Tap <span className="font-semibold text-orange-400">Share ⎋</span> then{' '}
-                  <span className="font-semibold text-orange-400">&apos;Add to Home Screen&apos;</span>
+                  Tap <span className="font-semibold text-orange-400">Share ⎋</span> below, then{' '}
+                  <span className="font-semibold text-orange-400">&apos;Add to Home Screen&apos;</span> to remove browser bars & run fullscreen.
                 </span>
               ) : (
-                'Add to your phone for instant, fullscreen kiosk access'
+                'Add to your phone for instant, fullscreen native app access'
               )}
             </p>
           </div>

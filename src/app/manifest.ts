@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Chè Bông – Inventory Management',
-    short_name: 'Chè Bông',
+    name: 'CB Inventory',
+    short_name: 'CB Inventory',
     description: 'Smart Inventory & Operations Management System for Chè Bông Dessert & Snacks',
     start_url: '/staff/dashboard',
     id: '/staff/dashboard',
