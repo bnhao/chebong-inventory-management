@@ -1,26 +1,41 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist } from 'next/font/google'
 import './globals.css'
-
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-})
+import PwaRegister from '@/components/PwaRegister'
 
 export const metadata: Metadata = {
-  title: 'Chè Bông – Inventory Management',
+  title: 'CB Inventory',
   description: 'Smart Inventory & Operations Management System for Chè Bông Dessert & Snacks',
+  applicationName: 'CB Inventory',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'CB Inventory',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
-    icon: '/icon.png',
+    icon: [
+      { url: '/icon.png', sizes: '256x256', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
     shortcut: '/icon.png',
-    apple: '/apple-icon.png',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
   },
 }
 
 export const viewport: Viewport = {
+  themeColor: '#e85d04',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -30,9 +45,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geist.variable} antialiased bg-white`}>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-touch-fullscreen" content="yes" />
+      </head>
+      <body className="antialiased bg-white min-h-screen">
         {children}
+        <PwaRegister />
       </body>
     </html>
   )
 }
+
