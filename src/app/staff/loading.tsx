@@ -1,31 +1,23 @@
+import Image from 'next/image'
+
 export default function StaffLoading() {
   return (
-    <div className="space-y-6 animate-pulse">
-      {/* Header Skeleton */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="h-3 w-32 bg-gray-200 rounded-md" />
-          <div className="h-8 w-48 bg-gray-200 rounded-xl" />
-        </div>
-        <div className="h-10 w-10 bg-gray-200 rounded-full" />
+    <div className="flex flex-col items-center justify-center py-24 space-y-4">
+      <div className="relative h-14 w-44 animate-pulse">
+        <Image
+          src="/chebong-logo.png"
+          alt="Chè Bông Logo"
+          fill
+          className="object-contain"
+          priority
+        />
       </div>
-
-      {/* Alert Skeleton */}
-      <div className="h-20 bg-amber-50/70 border border-amber-100 rounded-2xl" />
-
-      {/* Quick Actions Skeleton */}
-      <div className="space-y-2">
-        <div className="h-3 w-24 bg-gray-200 rounded-md" />
-        <div className="grid grid-cols-3 gap-3">
-          <div className="h-24 bg-gray-100 rounded-2xl" />
-          <div className="h-24 bg-gray-100 rounded-2xl" />
-          <div className="h-24 bg-gray-100 rounded-2xl" />
-        </div>
+      <div className="w-36 h-1.5 bg-orange-100 rounded-full overflow-hidden">
+        <div className="w-full h-full bg-[#e85d04] rounded-full animate-pulse" />
       </div>
-
-      {/* Content Skeleton */}
-      <div className="h-48 bg-white border border-gray-100 rounded-2xl" />
+      <p className="text-xs font-semibold text-gray-400 tracking-wide">
+        Loading inventory operations...
+      </p>
     </div>
   )
 }
-

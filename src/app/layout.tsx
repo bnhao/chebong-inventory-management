@@ -1,15 +1,14 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist } from 'next/font/google'
 import './globals.css'
 
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-})
-
 export const metadata: Metadata = {
-  title: 'Che Bong – Inventory',
-  description: 'Inventory management system for Che Bong',
+  title: 'Chè Bông – Inventory Management',
+  description: 'Smart Inventory & Operations Management System for Chè Bông Dessert & Snacks',
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/apple-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
@@ -25,9 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geist.variable} antialiased bg-white`}>
+      <body className="antialiased bg-white">
         {children}
       </body>
     </html>
   )
 }
+
