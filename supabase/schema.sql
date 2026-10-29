@@ -91,6 +91,11 @@ create table if not exists recipe_ingredients (
   constraint uq_clover_ingredient unique (clover_item_id, ingredient_id)
 );
 
+-- Ensure multi-ingredient BOM mapping remains valid on existing databases
+alter table recipe_ingredients drop constraint if exists recipe_ingredients_clover_item_id_key;
+alter table recipe_ingredients drop constraint if exists uq_clover_ingredient;
+alter table recipe_ingredients add constraint uq_clover_ingredient unique (clover_item_id, ingredient_id);
+
 -- ============================================================
 -- 2. INDEXES
 -- ============================================================
