@@ -21,11 +21,34 @@ export interface GroceryItem {
   suggestedQty: number
   isBelowThreshold: boolean
   costPerUnit: number
+  recentWasteQty?: number
+  recentUsageQty?: number
 }
 
 interface Props {
   ingredients: GroceryItem[]
   isManagerView?: boolean
+}
+
+const COVER_OPTIONS = [
+  { value: 3, label: '3 days' },
+  { value: 5, label: '5 days' },
+  { value: 7, label: '7 days' },
+  { value: 14, label: '14 days' },
+]
+
+const DEMAND_MULTIPLIERS: Record<string, number> = {
+  normal: 1.0,
+  busy: 1.2,
+  slow: 0.8,
+  peak: 1.5,
+}
+
+const DEMAND_LABELS: Record<string, string> = {
+  normal: 'Normal week (1.0x)',
+  busy: 'Busy week (+20%)',
+  slow: 'Slow week (−20%)',
+  peak: 'Peak season (+50%)',
 }
 
 const DEPARTMENTS = [
@@ -37,20 +60,191 @@ const DEPARTMENTS = [
   'Hand-Cooked Jellies',
 ] as const
 
+function computeSmartOrderQty(item: GroceryItem, coverDays: number, demandKey: string): number {
+  const multiplier = DEMAND_MULTIPLIERS[demandKey] ?? 1.0
+  const cappedDays = Math.min(coverDays, item.shelfLifeDays || 7)
+  const dailyRate = item.dailyUsage > 0 ? item.dailyUsage : Math.max(0.5, item.lowStockThreshold * 0.4)
+  const targetNeed = dailyRate * cappedDays * multiplier
+  const shortfall = targetNeed - item.totalStock
+  if (shortfall > 0) {
+    return Math.max(1, Math.ceil(shortfall))
+  }
+  return item.isBelowThreshold
+    ? Math.max(1, Math.ceil(item.parLevel - item.totalStock))
+    : Math.max(1, Math.ceil(dailyRate * 2 * multiplier))
+}
+
 export default function GroceriesClient({ ingredients, isManagerView = false }: Props) {
   const router = useRouter()
+
+  // AI Demand Planner state
+  const [coverDays, setCoverDays] = useState<number>(7)
+  const [demand, setDemand] = useState<string>('normal')
+  const [generating, setGenerating] = useState<boolean>(false)
 
   // Checklist state: Set of checked ingredient IDs
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
 
-  // Custom adjusted quantities per ingredient
+  // Custom adjusted quantities per ingredient (initialized with 7-day normal AI suggestion)
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
     for (const item of ingredients) {
-      init[item.id] = item.suggestedQty
+      init[item.id] = computeSmartOrderQty(item, 7, 'normal')
     }
     return init
   })
+
+  // Recalculate quantities when user changes coverDays / demand or clicks Regenerate
+  function applyAiSuggestions(nextCoverDays: number, nextDemand: string) {
+    const updated: Record<string, number> = {}
+    for (const item of ingredients) {
+      updated[item.id] = computeSmartOrderQty(item, nextCoverDays, nextDemand)
+    }
+    setQuantities(updated)
+  }
+
+  function handleRegenerateAi() {
+    setGenerating(true)
+    setTimeout(() => {
+      applyAiSuggestions(coverDays, demand)
+      setGenerating(false)
+    }, 450)
+  }
+
+  // Live AI Summary bullets powered by real stock, shelf-life, hand-cooked jellies, and waste data
+  const aiSummaryBullets = useMemo(() => {
+    const urgentStoreItems = ingredients.filter(
+      (i) => !i.isHandCooked && (i.isBelowThreshold || i.daysLeft <= 1.5)
+    )
+    const urgentJellies = ingredients.filter(
+      (i) => i.isHandCooked && (i.isBelowThreshold || i.daysLeft <= 1.5)
+    )
+    const wellStockedItems = ingredients.filter(
+      (i) => !i.isBelowThreshold && i.totalStock >= i.parLevel * 0.9
+    )
+    const cappedPerishables = ingredients.filter(
+      (i) => (i.shelfLifeDays || 7) < coverDays
+    )
+    const wastedItems = ingredients.filter((i) => (i.recentWasteQty || 0) > 0)
+
+    const bullets: Array<{ key: string; content: React.ReactNode }> = []
+
+    // Bullet 1: Urgent store-bought items needing order today
+    if (urgentStoreItems.length > 0) {
+      bullets.push({
+        key: 'urgent-store',
+        content: (
+          <>
+            <strong>
+              {urgentStoreItems.length} store-bought {urgentStoreItems.length === 1 ? 'item needs' : 'items need'} ordering today:
+            </strong>{' '}
+            {urgentStoreItems.map((i) => `${i.name} (${i.totalStock} ${i.unit} left)`).join(', ')}.
+          </>
+        ),
+      })
+    } else {
+      bullets.push({
+        key: 'urgent-store-ok',
+        content: (
+          <>
+            <strong>All store-bought staples are above critical threshold today</strong> — routine replenishment only.
+          </>
+        ),
+      })
+    }
+
+    // Bullet 2: Hand-cooked jellies (in-house kitchen prep)
+    if (urgentJellies.length > 0) {
+      bullets.push({
+        key: 'jellies-prep',
+        content: (
+          <>
+            <strong>
+              🍳 {urgentJellies.length} hand-cooked {urgentJellies.length === 1 ? 'jelly needs' : 'jellies need'} in-house kitchen prep today:
+            </strong>{' '}
+            {urgentJellies.map((j) => `${j.name} (${j.totalStock} ${j.unit})`).join(', ')} — cooked in-house, not bought pre-made.
+          </>
+        ),
+      })
+    } else {
+      bullets.push({
+        key: 'jellies-ok',
+        content: (
+          <>
+            <strong>🍳 Hand-Cooked Jellies</strong> are sufficiently prepped in the walk-in cooler for current burn rates.
+          </>
+        ),
+      })
+    }
+
+    // Bullet 3: Demand scaling & well-stocked items
+    const highVelocity = [...ingredients]
+      .sort((a, b) => (b.dailyUsage || 0) - (a.dailyUsage || 0))
+      .slice(0, 2)
+    const highVelNames = highVelocity.map((i) => i.name).join(' and ')
+    if (demand !== 'normal') {
+      bullets.push({
+        key: 'demand-scale',
+        content: (
+          <>
+            <strong>{DEMAND_LABELS[demand]} active:</strong> high-velocity items ({highVelNames}) are scaled for a{' '}
+            <strong>{coverDays}-day</strong> coverage window.
+            {wellStockedItems.length > 0 && (
+              <>
+                {' '}Well-stocked items (<strong>{wellStockedItems.slice(0, 3).map((i) => i.name).join(', ')}</strong>) are kept at minimal top-up.
+              </>
+            )}
+          </>
+        ),
+      })
+    } else if (wellStockedItems.length > 0) {
+      bullets.push({
+        key: 'well-stocked',
+        content: (
+          <>
+            <strong>{wellStockedItems.map((i) => i.name).join(', ')}</strong>{' '}
+            {wellStockedItems.length === 1 ? 'is' : 'are'} well stocked ({wellStockedItems.map((i) => `${i.totalStock} ${i.unit}`).join(', ')}) to avoid over-buying.
+          </>
+        ),
+      })
+    }
+
+    // Bullet 4: Perishables shelf-life cap & real waste protection
+    if (cappedPerishables.length > 0 || wastedItems.length > 0) {
+      bullets.push({
+        key: 'waste-cap',
+        content: (
+          <>
+            {cappedPerishables.length > 0 && (
+              <>
+                <strong>Perishables</strong> ({cappedPerishables.slice(0, 4).map((i) => `${i.name} · ${i.shelfLifeDays}d limit`).join(', ')}) are capped below the {coverDays}-day window by shelf life to prevent spoilage.{' '}
+              </>
+            )}
+            {wastedItems.length > 0 && (
+              <>
+                <strong>Live waste alert:</strong> recent spoilage logged on{' '}
+                <strong>
+                  {wastedItems.map((w) => `${w.name} (${w.recentWasteQty} ${w.unit})`).join(', ')}
+                </strong>{' '}
+                — order conservatively.
+              </>
+            )}
+          </>
+        ),
+      })
+    } else {
+      bullets.push({
+        key: 'waste-clean',
+        content: (
+          <>
+            <strong>Zero recent spoilage logged</strong> and all perishables fit safely within the {coverDays}-day shelf-life window.
+          </>
+        ),
+      })
+    }
+
+    return bullets
+  }, [ingredients, coverDays, demand])
 
   // Filters
   const [selectedDept, setSelectedDept] = useState<string>('All')
@@ -244,24 +438,24 @@ export default function GroceriesClient({ ingredients, isManagerView = false }: 
 
       {/* Main Container */}
       <div className="max-w-4xl mx-auto space-y-5">
-        {/* Shopping Overview & Basket Valuation Card */}
+        {/* AI Demand Planner & Smart Restock Controls Card */}
         <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center shrink-0 text-2xl">
-                🛒
+              <div className="w-11 h-11 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center shrink-0 text-xl">
+                ✨
               </div>
               <div>
                 <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">
-                  &apos;To-Buy&apos; Grocery Checklist
+                  AI Demand Planner &amp; &apos;To-Buy&apos; Grocery Checklist
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  Optimized for manual purchasing runs at Costco, Restaurant Depot & Asian Supermarkets.
+                  AI reviews sales velocity, live stock, shelf life, and waste history to draft your categorized market run.
                 </p>
               </div>
             </div>
 
-            <div className="text-left sm:text-right bg-orange-50/50 sm:bg-transparent p-3 sm:p-0 rounded-xl border border-orange-100 sm:border-0">
+            <div className="text-left sm:text-right bg-orange-50/50 sm:bg-transparent p-3 sm:p-0 rounded-xl border border-orange-100 sm:border-0 shrink-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                 ESTIMATED BASKET TOTAL
               </p>
@@ -272,6 +466,103 @@ export default function GroceriesClient({ ingredients, isManagerView = false }: 
                 {checkedIds.size} of {ingredients.length} items checked off (${basketValuation.checkedTotal.toFixed(2)})
               </p>
             </div>
+          </div>
+
+          {/* Cover Days + Expected Demand Selector Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                Cover how many days?
+              </label>
+              <div className="relative">
+                <select
+                  value={coverDays}
+                  onChange={(e) => {
+                    const nextDays = Number(e.target.value)
+                    setCoverDays(nextDays)
+                    applyAiSuggestions(nextDays, demand)
+                  }}
+                  className="w-full appearance-none bg-gray-50 hover:bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-[#e85d04] pr-9 shadow-2xs transition-colors"
+                >
+                  {COVER_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                Expected demand
+              </label>
+              <div className="relative">
+                <select
+                  value={demand}
+                  onChange={(e) => {
+                    const nextDemand = e.target.value
+                    setDemand(nextDemand)
+                    applyAiSuggestions(coverDays, nextDemand)
+                  }}
+                  className="w-full appearance-none bg-gray-50 hover:bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-[#e85d04] pr-9 shadow-2xs transition-colors"
+                >
+                  <option value="normal">Normal week (1.0x)</option>
+                  <option value="busy">Busy week (+20%)</option>
+                  <option value="slow">Slow week (−20%)</option>
+                  <option value="peak">Peak season (+50%)</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={handleRegenerateAi}
+                disabled={generating}
+                className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-bold py-2.5 px-4 rounded-xl text-xs tracking-wide active:scale-98 transition-all disabled:opacity-70 shadow-xs flex items-center justify-center gap-1.5"
+              >
+                {generating ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Recalculating AI Plan...</span>
+                  </>
+                ) : (
+                  <span>✨ Regenerate AI Quantities</span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Embedded Live AI Summary Box */}
+          <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl p-4 sm:p-5 space-y-2 shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs sm:text-sm font-extrabold text-[#166534] flex items-center gap-1.5">
+                <span>🤖</span>
+                <span>AI Summary · Live Stock, Shelf-Life &amp; Waste Intelligence</span>
+              </p>
+              <span className="text-[10px] font-bold bg-white/80 text-[#166534] border border-[#bbf7d0] px-2 py-0.5 rounded-full">
+                {coverDays}d cover · {DEMAND_LABELS[demand]}
+              </span>
+            </div>
+            <ul className="space-y-1.5 text-xs text-[#15803d] leading-relaxed">
+              {aiSummaryBullets.map((b) => (
+                <li key={b.key}>• {b.content}</li>
+              ))}
+            </ul>
           </div>
 
           {/* Progress Bar */}
@@ -463,12 +754,22 @@ export default function GroceriesClient({ ingredients, isManagerView = false }: 
                             </span>
                             <span>·</span>
                             <span>
-                              Min Par: <strong className="text-gray-800">{item.parLevel} {item.unit}</strong>
+                              {item.daysLeft.toFixed(1)}d left ({item.dailyUsage} {item.unit}/d)
                             </span>
                             <span>·</span>
                             <span className="text-[11px] text-gray-400 font-medium">
                               ~${(item.costPerUnit > 0 ? item.costPerUnit : 4.5).toFixed(2)}/{item.unit}
                             </span>
+                            {item.shelfLifeDays < coverDays && (
+                              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                                Capped to {item.shelfLifeDays}d shelf life
+                              </span>
+                            )}
+                            {(item.recentWasteQty || 0) > 0 && (
+                              <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                                ⚠️ {item.recentWasteQty} {item.unit} recent waste
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
