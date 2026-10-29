@@ -92,6 +92,7 @@ const managerNavItems = [
   { href: '/manager/dashboard', label: 'Overview', Icon: HomeIcon },
   { href: '/manager/recipes', label: 'Recipes', Icon: RecipeIcon },
   { href: '/manager/thresholds', label: 'Thresholds', Icon: ThresholdIcon },
+  { href: '/staff/groceries', label: 'Groceries', Icon: GroceriesIcon },
   { href: '/manager/reports', label: 'Logs', Icon: ReportIcon },
 ]
 

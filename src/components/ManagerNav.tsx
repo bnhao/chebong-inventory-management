@@ -41,6 +41,17 @@ function ThresholdIcon(active: boolean) {
   )
 }
 
+function GroceriesIcon(active: boolean) {
+  const color = active ? '#e85d04' : '#6b7280'
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="21" r="1"/>
+      <circle cx="20" cy="21" r="1"/>
+      <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.57L23 6H6"/>
+    </svg>
+  )
+}
+
 function ReportIcon(active: boolean) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
@@ -58,6 +69,7 @@ const navItems: NavItem[] = [
   { href: '/manager/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { href: '/manager/recipes', label: 'Recipes & Clover', icon: RecipeIcon },
   { href: '/manager/thresholds', label: 'Thresholds', icon: ThresholdIcon },
+  { href: '/staff/groceries', label: 'Groceries', icon: GroceriesIcon },
   { href: '/manager/reports', label: 'Logs & Audits', icon: ReportIcon },
 ]
 
