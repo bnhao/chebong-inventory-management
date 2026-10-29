@@ -10,7 +10,7 @@ set -e
 REPO="bnhao/chebong-inventory-management"
 
 echo "=========================================================="
-echo "🚀 Creating GitHub Milestones and Labels for CB Inventory"
+echo "🚀 Configuring GitHub Milestones and Labels for CB Inventory"
 echo "=========================================================="
 
 # 1. Create Labels
@@ -23,6 +23,8 @@ gh label create "layer:database" --color "d93f0b" --description "Database schema
 gh label create "layer:backend" --color "5319e7" --description "Backend API & Server Actions" --repo "$REPO" --force || true
 gh label create "layer:frontend" --color "1d76db" --description "Frontend UI & PWA" --repo "$REPO" --force || true
 gh label create "layer:hardware" --color "c2e0c6" --description "Hardware, POS & Camera APIs" --repo "$REPO" --force || true
+gh label create "layer:mobile" --color "0075ca" --description "Mobile-specific features & UX" --repo "$REPO" --force || true
+gh label create "layer:analytics" --color "a2eeef" --description "Analytics & AI demand forecasting" --repo "$REPO" --force || true
 gh label create "layer:finance" --color "006b75" --description "Financial & Accounting reporting" --repo "$REPO" --force || true
 
 # 2. Create Milestones via GitHub API
@@ -34,19 +36,37 @@ gh api "repos/$REPO/milestones" -f title="Milestone 4: Phase 3 (Intelligence & M
 
 echo ""
 echo "=========================================================="
-echo "📝 Creating 14 Tickets Across 4 Milestones..."
+echo "📝 Creating Tickets Across 4 Milestones..."
 echo "=========================================================="
+
+create_issue_if_missing() {
+  local title="$1"
+  local milestone="$2"
+  local labels="$3"
+  local body="$4"
+
+  # Check if issue title already exists
+  if gh issue list --repo "$REPO" --search "$title" --json title --jq '.[].title' | grep -qF "$title"; then
+    echo "⏭️  Already exists: $title"
+  else
+    echo "✨ Creating: $title"
+    gh issue create --repo "$REPO" \
+      --title "$title" \
+      --milestone "$milestone" \
+      --label "$labels" \
+      --body "$body"
+  fi
+}
 
 # ------------------------------------------------------------------------------
 # MILESTONE 1: Bridge 1 (Production Launch & Polish)
 # ------------------------------------------------------------------------------
 
-echo "Creating Ticket 1/14..."
-gh issue create --repo "$REPO" \
-  --title "[Database] Multi-Ingredient Recipe Constraint (uq_clover_ingredient)" \
-  --label "milestone:bridge-1,layer:database" \
-  --milestone "Milestone 1: Bridge 1 (Production Launch & Polish)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Database] Multi-Ingredient Recipe Constraint (uq_clover_ingredient)" \
+  "Milestone 1: Bridge 1 (Production Launch & Polish)" \
+  "milestone:bridge-1,layer:database" \
+  "### Objective
 Ensure a single Clover menu item (e.g. 'Durian Che') can deduct multiple raw ingredients simultaneously.
 
 ### Acceptance Criteria
@@ -56,12 +76,11 @@ Ensure a single Clover menu item (e.g. 'Durian Che') can deduct multiple raw ing
 
 *Status: Completed in initial schema setup.*"
 
-echo "Creating Ticket 2/14..."
-gh issue create --repo "$REPO" \
-  --title "[PWA] Mobile Home Screen Packaging & Dessert Bowl Branding" \
-  --label "milestone:bridge-1,layer:frontend" \
-  --milestone "Milestone 1: Bridge 1 (Production Launch & Polish)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[PWA] Mobile Home Screen Packaging & Dessert Bowl Branding" \
+  "Milestone 1: Bridge 1 (Production Launch & Polish)" \
+  "milestone:bridge-1,layer:frontend" \
+  "### Objective
 Package the application as a standalone Progressive Web App (PWA) with custom dessert bowl branding, safe areas, and offline-capable service worker.
 
 ### Acceptance Criteria
@@ -73,12 +92,11 @@ Package the application as a standalone Progressive Web App (PWA) with custom de
 
 *Status: Completed & deployed live on Vercel.*"
 
-echo "Creating Ticket 3/14..."
-gh issue create --repo "$REPO" \
-  --title "[Backend] Live Clover Webhook Endpoint & Verification Handshake" \
-  --label "milestone:bridge-1,layer:backend,layer:hardware" \
-  --milestone "Milestone 1: Bridge 1 (Production Launch & Polish)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Backend] Live Clover Webhook Endpoint & Verification Handshake" \
+  "Milestone 1: Bridge 1 (Production Launch & Polish)" \
+  "milestone:bridge-1,layer:backend,layer:hardware" \
+  "### Objective
 Implement the live Clover POS webhook endpoint to receive order/payment events and verify webhook ownership.
 
 ### Requirements
@@ -92,12 +110,11 @@ Implement the live Clover POS webhook endpoint to receive order/payment events a
 - [ ] Processing an order deducts the mapped ingredient recipe quantities.
 - [ ] Production webhook registered in Clover Merchant Dashboard."
 
-echo "Creating Ticket 4/14..."
-gh issue create --repo "$REPO" \
-  --title "[Fullstack] Clover Menu & Inventory Catalog Sync Action" \
-  --label "milestone:bridge-1,layer:backend,layer:frontend" \
-  --milestone "Milestone 1: Bridge 1 (Production Launch & Polish)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Fullstack] Clover Menu & Inventory Catalog Sync Action" \
+  "Milestone 1: Bridge 1 (Production Launch & Polish)" \
+  "milestone:bridge-1,layer:backend,layer:frontend" \
+  "### Objective
 Build a one-click sync action in the Manager Recipes view to import and update menu items directly from the Clover Inventory REST API.
 
 ### Requirements
@@ -114,12 +131,11 @@ Build a one-click sync action in the Manager Recipes view to import and update m
 # MILESTONE 2: Phase 2 — Floor Speed & Hardware Workflows
 # ------------------------------------------------------------------------------
 
-echo "Creating Ticket 5/14..."
-gh issue create --repo "$REPO" \
-  --title "[Mobile] Interactive 'To-Buy' Categorized Grocery Shopping Checklist" \
-  --label "milestone:phase-2,layer:frontend" \
-  --milestone "Milestone 2: Phase 2 (Floor Speed & Shopping Workflows)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Mobile] Interactive 'To-Buy' Categorized Grocery Shopping Checklist" \
+  "Milestone 2: Phase 2 (Floor Speed & Shopping Workflows)" \
+  "milestone:phase-2,layer:frontend,layer:mobile" \
+  "### Objective
 Upgrade \`/staff/groceries\` into a mobile shopping checklist optimized for manual grocery runs (Costco, Restaurant Depot, Asian markets).
 
 ### Requirements
@@ -133,12 +149,11 @@ Upgrade \`/staff/groceries\` into a mobile shopping checklist optimized for manu
 - [ ] Tapping an item checks it off with clear visual strike-through.
 - [ ] 'Restock Checked' shortcut that pre-fills receiving amounts."
 
-echo "Creating Ticket 6/14..."
-gh issue create --repo "$REPO" \
-  --title "[Mobile/Hardware] Camera Barcode Scanning for Restock Receiving" \
-  --label "milestone:phase-2,layer:hardware,layer:mobile" \
-  --milestone "Milestone 2: Phase 2 (Floor Speed & Shopping Workflows)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Mobile/Hardware] Camera Barcode Scanning for Restock Receiving" \
+  "Milestone 2: Phase 2 (Floor Speed & Shopping Workflows)" \
+  "milestone:phase-2,layer:hardware,layer:mobile" \
+  "### Objective
 Enable mobile camera barcode scanning in the Restock screen to auto-select ingredients when receiving vendor packaging.
 
 ### Requirements
@@ -152,12 +167,11 @@ Enable mobile camera barcode scanning in the Restock screen to auto-select ingre
 - [ ] Scanning a recognized product barcode selects the ingredient in < 1 second.
 - [ ] Option to associate a new barcode with an existing ingredient."
 
-echo "Creating Ticket 7/14..."
-gh issue create --repo "$REPO" \
-  --title "[Backend/POS] Clover Modifier Depletion Logic (Half Sugar, Extra Boba)" \
-  --label "milestone:phase-2,layer:backend,layer:hardware" \
-  --milestone "Milestone 2: Phase 2 (Floor Speed & Shopping Workflows)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Backend/POS] Clover Modifier Depletion Logic (Half Sugar, Extra Boba)" \
+  "Milestone 2: Phase 2 (Floor Speed & Shopping Workflows)" \
+  "milestone:phase-2,layer:backend,layer:hardware" \
+  "### Objective
 Upgrade Clover order webhook processing to parse customer modifiers and scale raw ingredient deductions accordingly.
 
 ### Requirements
@@ -174,12 +188,11 @@ Upgrade Clover order webhook processing to parse customer modifiers and scale ra
 # MILESTONE 3: Bridge 2 — Architecture & Data Scaling Prep
 # ------------------------------------------------------------------------------
 
-echo "Creating Ticket 8/14..."
-gh issue create --repo "$REPO" \
-  --title "[Database] Multi-Store Schema Migration (locations table & RLS)" \
-  --label "milestone:bridge-2,layer:database" \
-  --milestone "Milestone 3: Bridge 2 (Architecture & Scaling Prep)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Database] Multi-Store Schema Migration (locations table & RLS)" \
+  "Milestone 3: Bridge 2 (Architecture & Scaling Prep)" \
+  "milestone:bridge-2,layer:database" \
+  "### Objective
 Prepare the single-store database for multi-location operation by introducing a \`locations\` table and partitioning inventory by branch.
 
 ### Requirements
@@ -193,12 +206,11 @@ Prepare the single-store database for multi-location operation by introducing a 
 - [ ] RLS prevents cross-location data leakage for staff role.
 - [ ] Managers maintain global access across all branch locations."
 
-echo "Creating Ticket 9/14..."
-gh issue create --repo "$REPO" \
-  --title "[Backend] Automated Daily Inventory Ledger Rollups" \
-  --label "milestone:bridge-2,layer:backend,layer:database" \
-  --milestone "Milestone 3: Bridge 2 (Architecture & Scaling Prep)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Backend] Automated Daily Inventory Ledger Rollups" \
+  "Milestone 3: Bridge 2 (Architecture & Scaling Prep)" \
+  "milestone:bridge-2,layer:backend,layer:database" \
+  "### Objective
 Create daily automated rollups so dashboard queries and historical reporting stay instant as the transaction ledger grows.
 
 ### Requirements
@@ -210,12 +222,11 @@ Create daily automated rollups so dashboard queries and historical reporting sta
 - [ ] Nightly rollup accurately balances against raw transactions.
 - [ ] Dashboard historical load time remains < 200ms."
 
-echo "Creating Ticket 10/14..."
-gh issue create --repo "$REPO" \
-  --title "[Frontend] Historical Inventory Consumption & Variance Reports" \
-  --label "milestone:bridge-2,layer:frontend,layer:finance" \
-  --milestone "Milestone 3: Bridge 2 (Architecture & Scaling Prep)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Frontend] Historical Inventory Consumption & Variance Reports" \
+  "Milestone 3: Bridge 2 (Architecture & Scaling Prep)" \
+  "milestone:bridge-2,layer:frontend,layer:finance" \
+  "### Objective
 Provide visual analytics on ingredient usage rates, shrinkage trends, and audit discrepancy heatmaps over time.
 
 ### Requirements
@@ -231,12 +242,11 @@ Provide visual analytics on ingredient usage rates, shrinkage trends, and audit 
 # MILESTONE 4: Phase 3 — Intelligence & Multi-Store Scaling (Final Product)
 # ------------------------------------------------------------------------------
 
-echo "Creating Ticket 11/14..."
-gh issue create --repo "$REPO" \
-  --title "[Fullstack] Multi-Location Switcher & Inter-Store Stock Transfers" \
-  --label "milestone:phase-3,layer:backend,layer:frontend" \
-  --milestone "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Fullstack] Multi-Location Switcher & Inter-Store Stock Transfers" \
+  "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
+  "milestone:phase-3,layer:backend,layer:frontend" \
+  "### Objective
 Enable managers to switch between store locations and record stock transfers between branches.
 
 ### Requirements
@@ -248,12 +258,11 @@ Enable managers to switch between store locations and record stock transfers bet
 - [ ] Transfer deducts from source location and credits target location in a single transaction.
 - [ ] FIFO expiration dates persist across inter-store transfers."
 
-echo "Creating Ticket 12/14..."
-gh issue create --repo "$REPO" \
-  --title "[AI/Analytics] Predictive Demand & Seasonal Prep Forecasting" \
-  --label "milestone:phase-3,layer:backend,layer:analytics" \
-  --milestone "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[AI/Analytics] Predictive Demand & Seasonal Prep Forecasting" \
+  "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
+  "milestone:phase-3,layer:backend,layer:analytics" \
+  "### Objective
 Analyze historical Clover sales and seasonality to generate predictive prep volumes and grocery shopping recommendations.
 
 ### Requirements
@@ -265,12 +274,11 @@ Analyze historical Clover sales and seasonality to generate predictive prep volu
 - [ ] Forecast outputs actionable batch quantities for weekly prep.
 - [ ] Shopping recommendations adapt to recent sales velocity."
 
-echo "Creating Ticket 13/14..."
-gh issue create --repo "$REPO" \
-  --title "[Finance] Real-Time COGS, Waste Valuation & Margin Analysis" \
-  --label "milestone:phase-3,layer:finance,layer:frontend" \
-  --milestone "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Finance] Real-Time COGS, Waste Valuation & Margin Analysis" \
+  "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
+  "milestone:phase-3,layer:finance,layer:frontend" \
+  "### Objective
 Equip the manager dashboard with accurate restaurant financial metrics: Cost of Goods Sold (COGS), gross margin per recipe, and waste financial impact.
 
 ### Requirements
@@ -282,12 +290,11 @@ Equip the manager dashboard with accurate restaurant financial metrics: Cost of 
 - [ ] Financial metrics update dynamically with new batch costs.
 - [ ] Food cost percentage gauge with target thresholds (e.g. 25%-30% target)."
 
-echo "Creating Ticket 14/14..."
-gh issue create --repo "$REPO" \
-  --title "[Integration] Accounting Sync Pipeline (QuickBooks / Xero)" \
-  --label "milestone:phase-3,layer:finance,layer:backend" \
-  --milestone "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
-  --body "### Objective
+create_issue_if_missing \
+  "[Integration] Accounting Sync Pipeline (QuickBooks / Xero)" \
+  "Milestone 4: Phase 3 (Intelligence & Multi-Store Scaling)" \
+  "milestone:phase-3,layer:finance,layer:backend" \
+  "### Objective
 Automate monthly bookkeeping by generating accounting journal entries for inventory asset values and COGS for QuickBooks or Xero.
 
 ### Requirements
