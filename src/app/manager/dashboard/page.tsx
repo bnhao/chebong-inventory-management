@@ -5,6 +5,22 @@ import ManagerDashboardClient from './ManagerDashboardClient'
 
 export const dynamic = 'force-dynamic'
 
+export interface InventoryLogItem {
+  id: string
+  ingredient_id: string
+  ingredientName: string
+  unit: string
+  cost_per_unit: number
+  transaction_type: 'RESTOCK' | 'WASTE' | 'CYCLE_COUNT' | 'SALE'
+  quantity_change: number
+  previous_stock: number | null
+  new_stock: number | null
+  reason: string | null
+  reference_id: string | null
+  performed_by: string | null
+  created_at: string
+}
+
 export interface ManagerDashboardData {
   alerts: AlertItem[]
   ingredients: Ingredient[]
@@ -26,6 +42,7 @@ export interface ManagerDashboardData {
     discrepancy: number | null
     created_at: string
   }>
+  recentLogs: InventoryLogItem[]
 }
 
 async function getManagerDashboardData(): Promise<ManagerDashboardData> {
@@ -53,7 +70,7 @@ async function getManagerDashboardData(): Promise<ManagerDashboardData> {
   expiringCount = alerts.filter((a) => a.type === 'expiring_soon').length
   spoiledCount = alerts.filter((a) => a.type === 'spoiled').length
 
-  // 4. Fetch recent transactions for audit & cycle count tracking
+  // 4. Fetch recent transactions for audit, cycle count, and manager log stream
   const { data: recentTxs } = await supabase
     .from('inventory_transactions')
     .select(`
@@ -63,21 +80,27 @@ async function getManagerDashboardData(): Promise<ManagerDashboardData> {
       new_stock,
       quantity_change,
       previous_stock,
+      reason,
+      reference_id,
+      performed_by,
       created_at,
-      ingredient:ingredients ( name, unit )
+      ingredient:ingredients ( name, unit, cost_per_unit )
     `)
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(80)
 
   type TxWithIng = {
     id: string
     ingredient_id: string
-    transaction_type: string
+    transaction_type: 'RESTOCK' | 'WASTE' | 'CYCLE_COUNT' | 'SALE'
     new_stock: number | null
     quantity_change: number
     previous_stock: number | null
+    reason: string | null
+    reference_id: string | null
+    performed_by: string | null
     created_at: string
-    ingredient: { name: string; unit: string }[] | { name: string; unit: string } | null
+    ingredient: { name: string; unit: string; cost_per_unit: number | null }[] | { name: string; unit: string; cost_per_unit: number | null } | null
   }
 
   const txList = (recentTxs || []) as unknown as TxWithIng[]
@@ -117,6 +140,25 @@ async function getManagerDashboardData(): Promise<ManagerDashboardData> {
     }
   })
 
+  const recentLogs: InventoryLogItem[] = txList.map((tx) => {
+    const ingData = Array.isArray(tx.ingredient) ? tx.ingredient[0] : tx.ingredient
+    return {
+      id: tx.id,
+      ingredient_id: tx.ingredient_id,
+      ingredientName: ingData?.name || 'Unknown Item',
+      unit: ingData?.unit || 'units',
+      cost_per_unit: Number(ingData?.cost_per_unit) || 0,
+      transaction_type: tx.transaction_type,
+      quantity_change: Number(tx.quantity_change) || 0,
+      previous_stock: tx.previous_stock !== null ? Number(tx.previous_stock) : null,
+      new_stock: tx.new_stock !== null ? Number(tx.new_stock) : null,
+      reason: tx.reason,
+      reference_id: tx.reference_id,
+      performed_by: tx.performed_by,
+      created_at: tx.created_at,
+    }
+  })
+
   return {
     alerts,
     ingredients: ingredientsWithBatches.map((i) => ({
@@ -137,6 +179,7 @@ async function getManagerDashboardData(): Promise<ManagerDashboardData> {
     spoiledCount,
     cycleCountStatus,
     recentAudits,
+    recentLogs,
   }
 }
 

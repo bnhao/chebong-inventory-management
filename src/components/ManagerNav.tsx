@@ -58,7 +58,7 @@ const navItems: NavItem[] = [
   { href: '/manager/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { href: '/manager/recipes', label: 'Recipes & Clover', icon: RecipeIcon },
   { href: '/manager/thresholds', label: 'Thresholds', icon: ThresholdIcon },
-  { href: '/manager/reports', label: 'Reports & Audits', icon: ReportIcon },
+  { href: '/manager/reports', label: 'Logs & Audits', icon: ReportIcon },
 ]
 
 export default function ManagerNav() {

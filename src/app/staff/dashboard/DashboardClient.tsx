@@ -64,6 +64,12 @@ function getFormattedDate(): string {
 export default function DashboardClient({ data }: Props) {
   const router = useRouter()
 
+  // Alerts compact state
+  const [showAllAlerts, setShowAllAlerts] = useState(false)
+
+  const lowStockCount = data.alerts.filter((a) => a.type === 'low_stock').length
+  const expiringCount = data.alerts.filter((a) => a.type === 'expiring_soon' || a.type === 'spoiled').length
+
   // Manual restock form state (for desktop right column & mobile quick restock)
   const [selectedIngredientId, setSelectedIngredientId] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -139,14 +145,23 @@ export default function DashboardClient({ data }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (7 cols on lg:) - ALERTS, QUICK ACTIONS, CYCLE COUNT */}
         <div className="lg:col-span-7 space-y-6">
-          {/* ALERTS Section */}
+          {/* ALERTS Section (Compacted to 3 newest with See More option & counter summarized in header) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                ALERTS
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  ALERTS
+                </span>
+                {data.alerts.length > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-200">
+                    {data.alerts.length}
+                  </span>
+                )}
+              </div>
               <span className="text-xs text-gray-500 font-medium">
-                {data.alerts.length} notifications
+                {data.alerts.length === 0
+                  ? 'All stocked & fresh'
+                  : `${lowStockCount} low stock · ${expiringCount} expiring`}
               </span>
             </div>
 
@@ -160,13 +175,13 @@ export default function DashboardClient({ data }: Props) {
               </div>
             ) : (
               <div className="space-y-3">
-                {data.alerts.map((alert) => {
+                {(showAllAlerts ? data.alerts : data.alerts.slice(0, 3)).map((alert) => {
                   if (alert.type === 'expiring_soon') {
                     // Yellow Card (Figma style)
                     return (
                       <div
                         key={alert.id}
-                        className="bg-[#fffbeb] border border-[#fef08a] rounded-2xl p-4.5 flex items-start gap-3.5 shadow-xs transition-all hover:border-amber-300"
+                        className="bg-[#fffbeb] border border-[#fef08a] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs transition-all hover:border-amber-300"
                       >
                         <div className="text-amber-500 text-lg shrink-0 mt-0.5">⚠️</div>
                         <div className="flex-1 min-w-0">
@@ -185,7 +200,7 @@ export default function DashboardClient({ data }: Props) {
                   return (
                     <div
                       key={alert.id}
-                      className="bg-[#fef2f2] border border-[#fecaca] rounded-2xl p-4.5 flex items-start gap-3.5 shadow-xs transition-all hover:border-red-300"
+                      className="bg-[#fef2f2] border border-[#fecaca] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs transition-all hover:border-red-300"
                     >
                       <div className="w-4 h-4 rounded-full bg-red-600 mt-1 shrink-0 ring-4 ring-red-100" />
                       <div className="flex-1 min-w-0">
@@ -199,6 +214,30 @@ export default function DashboardClient({ data }: Props) {
                     </div>
                   )
                 })}
+
+                {/* See More / Show Less Toggle Button */}
+                {data.alerts.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllAlerts(!showAllAlerts)}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-gray-50 border border-gray-200/90 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 transition-all flex items-center justify-center gap-1.5 shadow-2xs active:scale-98"
+                  >
+                    <span>
+                      {showAllAlerts
+                        ? 'Show Less (3 Newest)'
+                        : `See More (${data.alerts.length - 3} more alerts)`}
+                    </span>
+                    <svg
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllAlerts ? 'rotate-180' : ''}`}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                )}
               </div>
             )}
           </div>

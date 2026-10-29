@@ -11,9 +11,12 @@ export interface AuditReportTransaction {
   unitCost: number
   transaction_type: 'RESTOCK' | 'WASTE' | 'CYCLE_COUNT' | 'SALE'
   quantity: number
+  previous_stock: number | null
+  new_stock: number | null
   discrepancy: number | null
   financialImpact: number
   notes: string | null
+  reference_id: string | null
   performed_by: string | null
   created_at: string
 }
@@ -31,6 +34,7 @@ async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
       new_stock,
       previous_stock,
       reason,
+      reference_id,
       performed_by,
       created_at,
       ingredient:ingredients (
@@ -40,7 +44,7 @@ async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
       )
     `)
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(200)
 
   if (error || !data) {
     console.error('Error fetching audit reports data:', error)
@@ -56,6 +60,7 @@ async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
     new_stock: number | null
     previous_stock: number | null
     reason: string | null
+    reference_id: string | null
     performed_by: string | null
     created_at: string
     ingredient: IngData[] | IngData | null
@@ -99,9 +104,12 @@ async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
       unitCost,
       transaction_type: tx.transaction_type,
       quantity: recordedQty,
+      previous_stock: tx.previous_stock !== null ? Number(tx.previous_stock) : null,
+      new_stock: tx.new_stock !== null ? Number(tx.new_stock) : null,
       discrepancy,
       financialImpact: Math.round(financialImpact * 100) / 100,
       notes: tx.reason,
+      reference_id: tx.reference_id,
       performed_by: tx.performed_by,
       created_at: tx.created_at,
     }

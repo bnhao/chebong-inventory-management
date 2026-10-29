@@ -13,6 +13,7 @@ export default function ReportsClient({ initialTransactions }: Props) {
   const [typeFilter, setTypeFilter] = useState<string>('ALL')
   const [discrepancyFilter, setDiscrepancyFilter] = useState<'all' | 'shortage' | 'surplus' | 'match'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [inspectedTx, setInspectedTx] = useState<AuditReportTransaction | null>(null)
 
   // KPI Calculations
   const stats = useMemo(() => {
@@ -33,6 +34,17 @@ export default function ReportsClient({ initialTransactions }: Props) {
     }
   }, [transactions])
 
+  // Count by log type
+  const typeCounts = useMemo(() => {
+    return {
+      ALL: transactions.length,
+      CYCLE_COUNT: transactions.filter((t) => t.transaction_type === 'CYCLE_COUNT').length,
+      RESTOCK: transactions.filter((t) => t.transaction_type === 'RESTOCK').length,
+      WASTE: transactions.filter((t) => t.transaction_type === 'WASTE').length,
+      SALE: transactions.filter((t) => t.transaction_type === 'SALE').length,
+    }
+  }, [transactions])
+
   // Filtered transactions
   const filtered = useMemo(() => {
     return transactions.filter((tx) => {
@@ -49,7 +61,8 @@ export default function ReportsClient({ initialTransactions }: Props) {
         const query = searchQuery.toLowerCase()
         const matchesName = tx.ingredientName.toLowerCase().includes(query)
         const matchesNotes = (tx.notes || '').toLowerCase().includes(query)
-        if (!matchesName && !matchesNotes) return false
+        const matchesRef = (tx.reference_id || '').toLowerCase().includes(query)
+        if (!matchesName && !matchesNotes && !matchesRef) return false
       }
 
       return true
@@ -58,15 +71,30 @@ export default function ReportsClient({ initialTransactions }: Props) {
 
   // Export to CSV
   function handleExportCSV() {
-    const headers = ['Timestamp', 'Transaction Type', 'Ingredient', 'Quantity', 'Unit', 'Discrepancy', 'Financial Impact ($)', 'Notes']
+    const headers = [
+      'Timestamp',
+      'Transaction Type',
+      'Ingredient',
+      'Quantity',
+      'Unit',
+      'Previous Stock',
+      'New Stock',
+      'Discrepancy',
+      'Financial Impact ($)',
+      'Reference ID',
+      'Notes',
+    ]
     const rows = filtered.map((tx) => [
       new Date(tx.created_at).toLocaleString(),
       tx.transaction_type,
       `"${tx.ingredientName}"`,
       tx.quantity,
       tx.unit,
+      tx.previous_stock !== null ? tx.previous_stock : '',
+      tx.new_stock !== null ? tx.new_stock : '',
       tx.discrepancy !== null ? tx.discrepancy : 'N/A',
       tx.financialImpact,
+      `"${tx.reference_id || ''}"`,
       `"${(tx.notes || '').replace(/"/g, '""')}"`,
     ])
 
@@ -74,7 +102,7 @@ export default function ReportsClient({ initialTransactions }: Props) {
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement('a')
     link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `chebong-inventory-audit-${new Date().toISOString().slice(0, 10)}.csv`)
+    link.setAttribute('download', `chebong-inventory-logs-${new Date().toISOString().slice(0, 10)}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -96,10 +124,10 @@ export default function ReportsClient({ initialTransactions }: Props) {
           </div>
           <div>
             <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">
-              Audit & Inventory Ledger
+              Activity Log History & Audit Ledger
             </h2>
             <p className="text-xs text-gray-500">
-              Official store audit records, variances, stock transactions, and waste tracking
+              Official store audit records, variances, stock transactions, deliveries, and waste tracking
             </p>
           </div>
         </div>
@@ -113,7 +141,7 @@ export default function ReportsClient({ initialTransactions }: Props) {
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          Export Audit CSV
+          Export Logs CSV
         </button>
       </div>
 
@@ -155,27 +183,28 @@ export default function ReportsClient({ initialTransactions }: Props) {
       {/* Toolbar & Filters */}
       <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 sm:p-5 space-y-3.5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Transaction Type Filter Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar bg-gray-100/80 p-1 rounded-xl">
-            {['ALL', 'CYCLE_COUNT', 'RESTOCK', 'WASTE', 'SALE'].map((t) => (
+          {/* Transaction Type Filter Tabs with Counts */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-gray-100/80 p-1 rounded-xl">
+            {[
+              { id: 'ALL', label: 'All Logs', count: typeCounts.ALL },
+              { id: 'RESTOCK', label: '📦 Restocks', count: typeCounts.RESTOCK },
+              { id: 'WASTE', label: '🗑️ Waste', count: typeCounts.WASTE },
+              { id: 'CYCLE_COUNT', label: '📋 Audits', count: typeCounts.CYCLE_COUNT },
+              { id: 'SALE', label: '🏷️ POS Sales', count: typeCounts.SALE },
+            ].map((t) => (
               <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  typeFilter === t
+                key={t.id}
+                onClick={() => setTypeFilter(t.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  typeFilter === t.id
                     ? 'bg-white text-gray-900 shadow-2xs'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {t === 'ALL'
-                  ? 'All Transactions'
-                  : t === 'CYCLE_COUNT'
-                  ? 'Audits (Cycle Count)'
-                  : t === 'RESTOCK'
-                  ? 'Restocks'
-                  : t === 'WASTE'
-                  ? 'Waste'
-                  : 'Clover Sales'}
+                <span>{t.label}</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200/70 text-gray-700 font-extrabold">
+                  {t.count}
+                </span>
               </button>
             ))}
           </div>
@@ -190,7 +219,7 @@ export default function ReportsClient({ initialTransactions }: Props) {
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Export Audit CSV
+            Export Logs CSV
           </button>
         </div>
 
@@ -199,7 +228,7 @@ export default function ReportsClient({ initialTransactions }: Props) {
           <div className="relative flex-1 w-full">
             <input
               type="text"
-              placeholder="Search by ingredient name or audit note..."
+              placeholder="Search by ingredient, note, staff, or order ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
@@ -207,7 +236,7 @@ export default function ReportsClient({ initialTransactions }: Props) {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2 text-xs text-gray-400"
+                className="absolute right-3 top-2 text-xs text-gray-400 hover:text-gray-600"
               >
                 ✕
               </button>
@@ -258,9 +287,9 @@ export default function ReportsClient({ initialTransactions }: Props) {
       <div className="block md:hidden space-y-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            Audit Records ({filtered.length})
+            Log Records ({filtered.length})
           </h3>
-          <span className="text-[11px] text-gray-400">Mobile View</span>
+          <span className="text-[11px] text-gray-400">Tap to inspect</span>
         </div>
         {filtered.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center text-xs text-gray-400">
@@ -281,7 +310,8 @@ export default function ReportsClient({ initialTransactions }: Props) {
             return (
               <div
                 key={tx.id}
-                className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 space-y-2.5"
+                onClick={() => setInspectedTx(tx)}
+                className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 space-y-2.5 hover:border-orange-300 transition-all cursor-pointer active:scale-99"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -290,20 +320,20 @@ export default function ReportsClient({ initialTransactions }: Props) {
                   </div>
                   <div>
                     {tx.transaction_type === 'CYCLE_COUNT' ? (
-                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                        Cycle Count
+                      <span className="text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                        📋 Audit
                       </span>
                     ) : tx.transaction_type === 'RESTOCK' ? (
-                      <span className="text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                        Restock
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        📦 Restock
                       </span>
                     ) : tx.transaction_type === 'WASTE' ? (
                       <span className="text-[10px] font-bold text-red-800 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
-                        Waste
+                        🗑️ Waste
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                        POS Sale
+                      <span className="text-[10px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                        🏷️ Clover Sale
                       </span>
                     )}
                   </div>
@@ -311,24 +341,22 @@ export default function ReportsClient({ initialTransactions }: Props) {
 
                 <div className="grid grid-cols-2 gap-2 bg-gray-50/80 rounded-xl p-2.5 text-xs">
                   <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Recorded Qty</span>
+                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Delta Qty</span>
                     <span className="font-extrabold text-gray-900">{tx.quantity} {tx.unit}</span>
                   </div>
                   <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Variance</span>
-                    {tx.discrepancy !== null ? (
-                      <span className={`font-bold ${tx.discrepancy === 0 ? 'text-green-700' : tx.discrepancy > 0 ? 'text-blue-700' : 'text-red-700'}`}>
-                        {tx.discrepancy === 0 ? '✓ Match' : `${tx.discrepancy > 0 ? '+' : ''}${tx.discrepancy} ${tx.unit}`}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">N/A</span>
-                    )}
+                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Stock Transition</span>
+                    <span className="font-bold text-gray-700">
+                      {tx.previous_stock !== null && tx.new_stock !== null
+                        ? `${tx.previous_stock} → ${tx.new_stock} ${tx.unit}`
+                        : 'Stock updated'}
+                    </span>
                   </div>
                 </div>
 
                 {tx.notes && (
-                  <p className="text-[11px] text-gray-500 italic bg-gray-50/50 rounded-lg px-2.5 py-1.5 border border-gray-100">
-                    {tx.notes}
+                  <p className="text-[11px] text-gray-600 bg-gray-50/50 rounded-lg px-2.5 py-1.5 border border-gray-100 truncate">
+                    Note: <span className="font-medium text-gray-800">{tx.notes}</span>
                   </p>
                 )}
               </div>
@@ -344,18 +372,19 @@ export default function ReportsClient({ initialTransactions }: Props) {
             <thead>
               <tr className="bg-gray-50/70 text-gray-600 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
                 <th className="py-3 px-5">Timestamp</th>
-                <th className="py-3 px-4">Transaction Type</th>
+                <th className="py-3 px-4">Log Kind</th>
                 <th className="py-3 px-4">Ingredient</th>
-                <th className="py-3 px-4">Quantity</th>
-                <th className="py-3 px-4">Audit Discrepancy</th>
-                <th className="py-3 px-4">Est. Financial Impact</th>
-                <th className="py-3 px-5">Audit Notes</th>
+                <th className="py-3 px-4">Recorded Qty</th>
+                <th className="py-3 px-4">Stock Transition</th>
+                <th className="py-3 px-4">Variance / Impact</th>
+                <th className="py-3 px-5">Notes / Staff</th>
+                <th className="py-3 px-4 text-center">Inspect</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-xs text-gray-400">
+                  <td colSpan={8} className="py-8 text-center text-xs text-gray-400">
                     No transactions match the selected filter criteria.
                   </td>
                 </tr>
@@ -372,7 +401,11 @@ export default function ReportsClient({ initialTransactions }: Props) {
                   })
 
                   return (
-                    <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr
+                      key={tx.id}
+                      onClick={() => setInspectedTx(tx)}
+                      className="hover:bg-orange-50/30 transition-colors cursor-pointer group"
+                    >
                       {/* Timestamp */}
                       <td className="py-3 px-5 whitespace-nowrap">
                         <span className="font-bold text-gray-800 text-xs block">{formattedDate}</span>
@@ -382,11 +415,11 @@ export default function ReportsClient({ initialTransactions }: Props) {
                       {/* Transaction Type Badge */}
                       <td className="py-3 px-4">
                         {tx.transaction_type === 'CYCLE_COUNT' ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-md">
-                            <span>📋</span> Cycle Count
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-800 bg-blue-50 border border-blue-200/80 px-2.5 py-0.5 rounded-md">
+                            <span>📋</span> Audit
                           </span>
                         ) : tx.transaction_type === 'RESTOCK' ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-800 bg-blue-50 border border-blue-200/80 px-2.5 py-0.5 rounded-md">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-md">
                             <span>📦</span> Restock
                           </span>
                         ) : tx.transaction_type === 'WASTE' ? (
@@ -395,13 +428,13 @@ export default function ReportsClient({ initialTransactions }: Props) {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 px-2.5 py-0.5 rounded-md">
-                            <span>🛍️</span> Clover Sale
+                            <span>🏷️</span> Clover Sale
                           </span>
                         )}
                       </td>
 
                       {/* Ingredient */}
-                      <td className="py-3 px-4 font-bold text-gray-900">
+                      <td className="py-3 px-4 font-bold text-gray-900 group-hover:text-[#e85d04] transition-colors">
                         {tx.ingredientName}
                       </td>
 
@@ -410,41 +443,51 @@ export default function ReportsClient({ initialTransactions }: Props) {
                         {tx.quantity} {tx.unit}
                       </td>
 
-                      {/* Audit Discrepancy */}
-                      <td className="py-3 px-4">
-                        {tx.transaction_type === 'CYCLE_COUNT' && tx.discrepancy !== null ? (
-                          tx.discrepancy === 0 ? (
-                            <span className="inline-flex items-center text-[11px] font-bold text-green-700 bg-green-50 px-2.5 py-0.5 rounded-md border border-green-200/60">
-                              ✓ 0.00 {tx.unit} (Exact Match)
-                            </span>
-                          ) : tx.discrepancy < 0 ? (
-                            <span className="inline-flex items-center text-[11px] font-bold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-md border border-red-200/60">
-                              {tx.discrepancy.toFixed(2)} {tx.unit} Shortage
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200/60">
-                              +{tx.discrepancy.toFixed(2)} {tx.unit} Surplus
-                            </span>
-                          )
+                      {/* Stock Transition */}
+                      <td className="py-3 px-4 text-xs font-medium text-gray-600">
+                        {tx.previous_stock !== null && tx.new_stock !== null ? (
+                          <span>{tx.previous_stock} → <span className="font-bold text-gray-900">{tx.new_stock}</span> {tx.unit}</span>
                         ) : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-gray-400">—</span>
                         )}
                       </td>
 
-                      {/* Est. Financial Impact */}
-                      <td className="py-3 px-4 text-xs font-bold">
-                        {tx.financialImpact === 0 ? (
-                          <span className="text-gray-400">$0.00</span>
-                        ) : tx.financialImpact > 0 ? (
-                          <span className="text-green-700">+${tx.financialImpact.toFixed(2)}</span>
+                      {/* Variance / Impact */}
+                      <td className="py-3 px-4">
+                        {tx.transaction_type === 'CYCLE_COUNT' && tx.discrepancy !== null ? (
+                          tx.discrepancy === 0 ? (
+                            <span className="inline-flex items-center text-[11px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-200/60">
+                              ✓ Match
+                            </span>
+                          ) : tx.discrepancy < 0 ? (
+                            <span className="inline-flex items-center text-[11px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200/60">
+                              {tx.discrepancy.toFixed(2)} {tx.unit}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
+                              +{tx.discrepancy.toFixed(2)} {tx.unit}
+                            </span>
+                          )
                         ) : (
-                          <span className="text-red-600">-${Math.abs(tx.financialImpact).toFixed(2)}</span>
+                          <span className="text-xs font-bold text-gray-500">
+                            ${Math.abs(tx.financialImpact).toFixed(2)}
+                          </span>
                         )}
                       </td>
 
                       {/* Audit Notes */}
                       <td className="py-3 px-5 text-xs text-gray-600 max-w-xs truncate" title={tx.notes || ''}>
                         {tx.notes || '—'}
+                      </td>
+
+                      {/* Inspect Action */}
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          type="button"
+                          className="text-gray-400 group-hover:text-[#e85d04] hover:bg-orange-50 p-1 rounded-lg text-xs font-bold transition-all"
+                        >
+                          🔍
+                        </button>
                       </td>
                     </tr>
                   )
@@ -454,7 +497,107 @@ export default function ReportsClient({ initialTransactions }: Props) {
           </table>
         </div>
       </div>
+
+      {/* INSPECTION MODAL: Full details if anything happens */}
+      {inspectedTx && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setInspectedTx(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+              <div>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Log Inspection Record
+                </span>
+                <h3 className="text-lg font-black text-gray-900 mt-0.5">
+                  {inspectedTx.ingredientName}
+                </h3>
+              </div>
+              <button
+                onClick={() => setInspectedTx(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-gray-50 rounded-2xl p-4">
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Log Type</span>
+                  <span className="font-extrabold text-gray-900 text-sm">{inspectedTx.transaction_type}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Recorded Timestamp</span>
+                  <span className="font-semibold text-gray-800 text-xs">
+                    {new Date(inspectedTx.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Recorded Quantity</span>
+                  <span className="font-extrabold text-sm text-gray-900">
+                    {inspectedTx.quantity} {inspectedTx.unit}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Stock Transition</span>
+                  <span className="font-extrabold text-sm text-gray-900">
+                    {inspectedTx.previous_stock ?? '—'} {inspectedTx.unit} → {inspectedTx.new_stock ?? '—'} {inspectedTx.unit}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Audit Discrepancy</span>
+                  <span className="font-bold text-gray-900">
+                    {inspectedTx.discrepancy !== null ? `${inspectedTx.discrepancy} ${inspectedTx.unit}` : 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Financial Valuation</span>
+                  <span className="font-bold text-gray-900">
+                    ${Math.abs(inspectedTx.financialImpact).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1 pt-1">
+                <span className="text-gray-400 uppercase font-bold text-[10px] block">Notes / Reason Recorded</span>
+                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-3 text-gray-800 font-medium">
+                  {inspectedTx.notes || 'No specific note was entered for this action.'}
+                </div>
+              </div>
+
+              {inspectedTx.reference_id && (
+                <div className="space-y-1">
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Reference / Clover Order ID</span>
+                  <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-2.5 font-mono text-[11px] text-gray-700">
+                    {inspectedTx.reference_id}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <span className="text-gray-400 uppercase font-bold text-[10px] block">System Transaction UUID</span>
+                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-2.5 font-mono text-[11px] text-gray-500 break-all">
+                  {inspectedTx.id}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setInspectedTx(null)}
+                className="bg-gray-900 hover:bg-black text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all"
+              >
+                Close Inspector
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

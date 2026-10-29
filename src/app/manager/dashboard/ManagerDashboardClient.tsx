@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { submitRestockAction } from '@/app/actions/inventory'
-import { ManagerDashboardData } from './page'
+import { ManagerDashboardData, InventoryLogItem } from './page'
 
 interface Props {
   data: ManagerDashboardData
@@ -12,6 +12,9 @@ interface Props {
 
 export default function ManagerDashboardClient({ data }: Props) {
   const router = useRouter()
+
+  // Alerts compact state
+  const [showAllAlerts, setShowAllAlerts] = useState(false)
 
   // Manual Restock form state (matches right panel in Figma)
   const [selectedIngredientId, setSelectedIngredientId] = useState('')
@@ -21,7 +24,44 @@ export default function ManagerDashboardClient({ data }: Props) {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
+  // Log filter and search state
+  const [logTypeFilter, setLogTypeFilter] = useState<'ALL' | 'RESTOCK' | 'WASTE' | 'CYCLE_COUNT' | 'SALE'>('ALL')
+  const [logSearchQuery, setLogSearchQuery] = useState('')
+  const [inspectedLog, setInspectedLog] = useState<InventoryLogItem | null>(null)
+
   const selectedIngredient = data.ingredients.find((i) => i.id === selectedIngredientId)
+
+  // Filtered logs calculation
+  const logCounts = useMemo(() => {
+    const logs = data.recentLogs || []
+    return {
+      ALL: logs.length,
+      RESTOCK: logs.filter((l) => l.transaction_type === 'RESTOCK').length,
+      WASTE: logs.filter((l) => l.transaction_type === 'WASTE').length,
+      CYCLE_COUNT: logs.filter((l) => l.transaction_type === 'CYCLE_COUNT').length,
+      SALE: logs.filter((l) => l.transaction_type === 'SALE').length,
+    }
+  }, [data.recentLogs])
+
+  const filteredLogs = useMemo(() => {
+    const logs = data.recentLogs || []
+    return logs.filter((log) => {
+      if (logTypeFilter !== 'ALL' && log.transaction_type !== logTypeFilter) {
+        return false
+      }
+      if (logSearchQuery.trim()) {
+        const q = logSearchQuery.toLowerCase()
+        const matchesName = log.ingredientName.toLowerCase().includes(q)
+        const matchesReason = (log.reason || '').toLowerCase().includes(q)
+        const matchesRef = (log.reference_id || '').toLowerCase().includes(q)
+        if (!matchesName && !matchesReason && !matchesRef) return false
+      }
+      return true
+    })
+  }, [data.recentLogs, logTypeFilter, logSearchQuery])
+
+  // Visible alerts (compacted to 3 by default)
+  const visibleAlerts = showAllAlerts ? data.alerts : data.alerts.slice(0, 3)
 
   async function handleRestockSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -116,18 +156,27 @@ export default function ManagerDashboardClient({ data }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: ALERTS, QUICK ACTIONS, and CYCLE COUNT (7 cols on lg:) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Section: Alerts Header */}
+          {/* Section: Alerts Header (Compacted to 3 newest with See More option & counter summarized in header) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                ALERTS
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  ALERTS
+                </span>
+                {data.alerts.length > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-200">
+                    {data.alerts.length}
+                  </span>
+                )}
+              </div>
               <span className="text-xs text-gray-500 font-medium">
-                {data.alerts.length} active notifications
+                {data.alerts.length === 0
+                  ? 'All clear'
+                  : `${data.lowStockCount} low stock · ${data.expiringCount + data.spoiledCount} expiring`}
               </span>
             </div>
 
-            {/* Figma-Matched Alert Cards */}
+            {/* Alert Cards */}
             {data.alerts.length === 0 ? (
               <div className="bg-green-50 border border-green-200/80 rounded-2xl p-4 flex items-center gap-3">
                 <span className="text-xl">✅</span>
@@ -138,13 +187,13 @@ export default function ManagerDashboardClient({ data }: Props) {
               </div>
             ) : (
               <div className="space-y-3">
-                {data.alerts.map((alert) => {
+                {visibleAlerts.map((alert) => {
                   if (alert.type === 'expiring_soon') {
                     // Yellow Card (Figma style)
                     return (
                       <div
                         key={alert.id}
-                        className="bg-[#fffbeb] border border-[#fef08a] rounded-2xl p-4.5 flex items-start gap-3.5 shadow-xs transition-all hover:border-amber-300"
+                        className="bg-[#fffbeb] border border-[#fef08a] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs transition-all hover:border-amber-300"
                       >
                         <div className="text-amber-500 text-lg shrink-0 mt-0.5">⚠️</div>
                         <div className="flex-1 min-w-0">
@@ -163,7 +212,7 @@ export default function ManagerDashboardClient({ data }: Props) {
                   return (
                     <div
                       key={alert.id}
-                      className="bg-[#fef2f2] border border-[#fecaca] rounded-2xl p-4.5 flex items-start gap-3.5 shadow-xs transition-all hover:border-red-300"
+                      className="bg-[#fef2f2] border border-[#fecaca] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs transition-all hover:border-red-300"
                     >
                       <div className="w-4 h-4 rounded-full bg-red-600 mt-1 shrink-0 ring-4 ring-red-100" />
                       <div className="flex-1 min-w-0">
@@ -177,6 +226,30 @@ export default function ManagerDashboardClient({ data }: Props) {
                     </div>
                   )
                 })}
+
+                {/* See More / Show Less Toggle Button */}
+                {data.alerts.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllAlerts(!showAllAlerts)}
+                    className="w-full py-2.5 px-4 bg-white hover:bg-gray-50 border border-gray-200/90 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 transition-all flex items-center justify-center gap-1.5 shadow-2xs active:scale-98"
+                  >
+                    <span>
+                      {showAllAlerts
+                        ? 'Show Less (3 Newest)'
+                        : `See More (${data.alerts.length - 3} more alerts)`}
+                    </span>
+                    <svg
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllAlerts ? 'rotate-180' : ''}`}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -384,6 +457,332 @@ export default function ManagerDashboardClient({ data }: Props) {
           </div>
         </div>
       </div>
+
+      {/* SECTION: History of Log Data for Manager View with Options to Filter What Kind of Log It Is */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 sm:p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📜</span>
+              <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">
+                History of Activity & Inventory Logs
+              </h2>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Live audit trail for deliveries, spoilage waste, cycle count checks, and Clover sales
+            </p>
+          </div>
+
+          <Link
+            href="/manager/reports"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#e85d04] hover:text-[#d45203] bg-orange-50 hover:bg-orange-100/80 px-3.5 py-2 rounded-xl border border-orange-200/60 transition-all shrink-0 self-start sm:self-auto"
+          >
+            <span>View Full Ledger & Export</span>
+            <span>→</span>
+          </Link>
+        </div>
+
+        {/* Filter Toolbar: What Kind of Log is it? */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Options to filter out what kind of log it is */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-gray-100/80 p-1 rounded-xl">
+            <button
+              onClick={() => setLogTypeFilter('ALL')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                logTypeFilter === 'ALL'
+                  ? 'bg-white text-gray-900 shadow-2xs'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <span>All Logs</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200/70 text-gray-700 font-extrabold">
+                {logCounts.ALL}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setLogTypeFilter('RESTOCK')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                logTypeFilter === 'RESTOCK'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'text-emerald-700 hover:bg-emerald-50'
+              }`}
+            >
+              <span>📦 Restocks</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${logTypeFilter === 'RESTOCK' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+                {logCounts.RESTOCK}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setLogTypeFilter('WASTE')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                logTypeFilter === 'WASTE'
+                  ? 'bg-red-600 text-white shadow-2xs'
+                  : 'text-red-700 hover:bg-red-50'
+              }`}
+            >
+              <span>🗑️ Waste</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${logTypeFilter === 'WASTE' ? 'bg-red-700 text-white' : 'bg-red-100 text-red-800'}`}>
+                {logCounts.WASTE}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setLogTypeFilter('CYCLE_COUNT')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                logTypeFilter === 'CYCLE_COUNT'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-blue-700 hover:bg-blue-50'
+              }`}
+            >
+              <span>📋 Audits</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${logTypeFilter === 'CYCLE_COUNT' ? 'bg-blue-700 text-white' : 'bg-blue-100 text-blue-800'}`}>
+                {logCounts.CYCLE_COUNT}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setLogTypeFilter('SALE')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                logTypeFilter === 'SALE'
+                  ? 'bg-purple-600 text-white shadow-2xs'
+                  : 'text-purple-700 hover:bg-purple-50'
+              }`}
+            >
+              <span>🏷️ Clover Sales</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${logTypeFilter === 'SALE' ? 'bg-purple-700 text-white' : 'bg-purple-100 text-purple-800'}`}>
+                {logCounts.SALE}
+              </span>
+            </button>
+          </div>
+
+          {/* Quick search input */}
+          <div className="relative flex-1 lg:max-w-xs">
+            <input
+              type="text"
+              placeholder="Search by ingredient, staff, note..."
+              value={logSearchQuery}
+              onChange={(e) => setLogSearchQuery(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+            />
+            {logSearchQuery && (
+              <button
+                onClick={() => setLogSearchQuery('')}
+                className="absolute right-3 top-2 text-xs text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Logs List Stream */}
+        {filteredLogs.length === 0 ? (
+          <div className="py-8 text-center bg-gray-50/70 border border-dashed border-gray-200 rounded-2xl">
+            <p className="text-xs font-semibold text-gray-500">No logs found matching this filter criteria.</p>
+            <p className="text-[11px] text-gray-400 mt-1">Try switching to &quot;All Logs&quot; or clearing your search term.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
+            {filteredLogs.slice(0, 15).map((log) => {
+              const date = new Date(log.created_at)
+              const formattedDate = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })
+              const formattedTime = date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+
+              return (
+                <div
+                  key={log.id}
+                  onClick={() => setInspectedLog(log)}
+                  className="p-3.5 sm:p-4 hover:bg-orange-50/20 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                >
+                  <div className="flex items-start sm:items-center gap-3 min-w-0">
+                    {/* Log Type Badge with Color & Icon */}
+                    <div className="shrink-0 mt-0.5 sm:mt-0">
+                      {log.transaction_type === 'RESTOCK' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                          <span>📦</span> Restock
+                        </span>
+                      ) : log.transaction_type === 'WASTE' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-800 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">
+                          <span>🗑️</span> Waste
+                        </span>
+                      ) : log.transaction_type === 'CYCLE_COUNT' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
+                          <span>📋</span> Audit
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
+                          <span>🏷️</span> Clover POS
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Ingredient & Reason */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-sm text-gray-900 group-hover:text-[#e85d04] transition-colors">
+                          {log.ingredientName}
+                        </span>
+                        <span className="text-[11px] text-gray-400">
+                          {formattedDate} · {formattedTime}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">
+                        {log.reason ? (
+                          <span>Note: <span className="font-medium text-gray-700">{log.reason}</span></span>
+                        ) : log.transaction_type === 'RESTOCK' ? (
+                          'Delivery received & added to inventory'
+                        ) : log.transaction_type === 'SALE' ? (
+                          'Automated deduction via POS register'
+                        ) : (
+                          'Routine stock update'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stock transition and quantity delta */}
+                  <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pl-10 sm:pl-0">
+                    <div className="text-left sm:text-right">
+                      <div className="text-xs font-black">
+                        {log.transaction_type === 'RESTOCK' ? (
+                          <span className="text-emerald-700">+{log.quantity_change} {log.unit}</span>
+                        ) : log.transaction_type === 'WASTE' || log.transaction_type === 'SALE' ? (
+                          <span className="text-red-700">-{log.quantity_change} {log.unit}</span>
+                        ) : (
+                          <span className="text-blue-700">Count: {log.new_stock !== null ? log.new_stock : log.quantity_change} {log.unit}</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-gray-400 font-medium">
+                        {log.previous_stock !== null && log.new_stock !== null ? (
+                          <span>{log.previous_stock} → {log.new_stock} {log.unit}</span>
+                        ) : (
+                          <span>Current stock adjusted</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="text-gray-400 group-hover:text-[#e85d04] text-xs font-bold p-1 rounded-lg hover:bg-orange-50"
+                      title="Inspect full log details"
+                    >
+                      Inspect 🔍
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {filteredLogs.length > 15 && (
+          <div className="text-center pt-2">
+            <Link
+              href="/manager/reports"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-[#e85d04]"
+            >
+              <span>Showing 15 of {filteredLogs.length} matching logs · Open full historical ledger →</span>
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* INSPECTION MODAL: If anything happens, the manager can check all diagnostic fields */}
+      {inspectedLog && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setInspectedLog(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+              <div>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Log Inspection Record
+                </span>
+                <h3 className="text-lg font-black text-gray-900 mt-0.5">
+                  {inspectedLog.ingredientName}
+                </h3>
+              </div>
+              <button
+                onClick={() => setInspectedLog(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-gray-50 rounded-2xl p-4">
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Log Type</span>
+                  <span className="font-extrabold text-gray-900 text-sm">{inspectedLog.transaction_type}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Recorded Timestamp</span>
+                  <span className="font-semibold text-gray-800 text-xs">
+                    {new Date(inspectedLog.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Quantity Changed</span>
+                  <span className="font-extrabold text-sm text-gray-900">
+                    {inspectedLog.quantity_change} {inspectedLog.unit}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Stock Transition</span>
+                  <span className="font-extrabold text-sm text-gray-900">
+                    {inspectedLog.previous_stock ?? '—'} {inspectedLog.unit} → {inspectedLog.new_stock ?? '—'} {inspectedLog.unit}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1 pt-1">
+                <span className="text-gray-400 uppercase font-bold text-[10px] block">Notes / Reason Recorded</span>
+                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-3 text-gray-800 font-medium">
+                  {inspectedLog.reason || 'No specific note was entered for this action.'}
+                </div>
+              </div>
+
+              {inspectedLog.reference_id && (
+                <div className="space-y-1">
+                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Reference / POS Order ID</span>
+                  <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-2.5 font-mono text-[11px] text-gray-700">
+                    {inspectedLog.reference_id}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <span className="text-gray-400 uppercase font-bold text-[10px] block">System Transaction UUID</span>
+                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-2.5 font-mono text-[11px] text-gray-500 break-all">
+                  {inspectedLog.id}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setInspectedLog(null)}
+                className="bg-gray-900 hover:bg-black text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all"
+              >
+                Close Inspector
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -92,7 +92,7 @@ const managerNavItems = [
   { href: '/manager/dashboard', label: 'Overview', Icon: HomeIcon },
   { href: '/manager/recipes', label: 'Recipes', Icon: RecipeIcon },
   { href: '/manager/thresholds', label: 'Thresholds', Icon: ThresholdIcon },
-  { href: '/manager/reports', label: 'Audits', Icon: ReportIcon },
+  { href: '/manager/reports', label: 'Logs', Icon: ReportIcon },
 ]
 
 export default function BottomNav() {
