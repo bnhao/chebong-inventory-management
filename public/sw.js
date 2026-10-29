@@ -42,6 +42,13 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// Listen for instant manual/auto update triggers from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
 // 3. Fetch Event: Intelligent caching strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event

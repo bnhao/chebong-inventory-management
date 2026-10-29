@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import PwaRegister from '@/components/PwaRegister'
+import RealtimeSync from '@/components/RealtimeSync'
 
 export const metadata: Metadata = {
   title: 'CB Inventory',
@@ -52,6 +53,7 @@ export default function RootLayout({
       <body className="antialiased bg-white min-h-screen">
         {children}
         <PwaRegister />
+        <RealtimeSync />
       </body>
     </html>
   )

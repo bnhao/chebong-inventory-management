@@ -190,3 +190,45 @@ insert into ingredients (name, unit, current_stock, low_stock_threshold, spoiled
   ('Jackfruit', 'kg', 5.0, 1, 5, 0.8, 5.20),
   ('Grass Jelly', 'kg', 4.0, 1, 7, 0.4, 4.50)
 on conflict do nothing;
+
+-- ============================================================
+-- 6. SUPABASE REALTIME REPLICATION (MULTI-DEVICE LIVE SYNC)
+-- ============================================================
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'ingredients'
+  ) then
+    alter publication supabase_realtime add table ingredients;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'inventory_batches'
+  ) then
+    alter publication supabase_realtime add table inventory_batches;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'inventory_transactions'
+  ) then
+    alter publication supabase_realtime add table inventory_transactions;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'clover_items'
+  ) then
+    alter publication supabase_realtime add table clover_items;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'recipe_ingredients'
+  ) then
+    alter publication supabase_realtime add table recipe_ingredients;
+  end if;
+end $$;
