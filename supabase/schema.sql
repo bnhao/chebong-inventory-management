@@ -180,17 +180,80 @@ create policy "all_recipes" on recipe_ingredients for all using (true) with chec
 -- 5. INITIAL SEED DATA
 -- ============================================================
 
-insert into ingredients (name, unit, current_stock, low_stock_threshold, spoiled_time_limit_days, daily_usage_rate, cost_per_unit) values
-  ('Pandan Jelly', 'kg', 5.0, 2, 3, 0.7, 6.80),
-  ('Whole Milk', 'L', 12.0, 5, 3, 1.2, 1.90),
-  ('Brown Sugar', 'kg', 15.0, 3, 90, 0.8, 2.40),
-  ('Tapioca Pearls', 'kg', 8.0, 2, 60, 0.5, 3.20),
-  ('Mung Beans', 'kg', 6.0, 1, 30, 0.3, 2.80),
-  ('Coconut Milk', 'L', 10.0, 3, 4, 1.5, 3.10),
-  ('Durian Pulp', 'kg', 4.0, 2, 4, 1.0, 14.00),
-  ('Jackfruit', 'kg', 5.0, 1, 5, 0.8, 5.20),
-  ('Grass Jelly', 'kg', 4.0, 1, 7, 0.4, 4.50)
+insert into ingredients (name, unit, current_stock, low_stock_threshold, spoiled_time_limit_days, daily_usage_rate, cost_per_unit, category, description) values
+  ('Pandan Jelly', 'kg', 5.0, 2, 3, 0.7, 6.80, 'Hand-Cooked Jellies', 'Hand-cooked in-house kitchen prep (not bought pre-made)'),
+  ('Grass Jelly', 'kg', 4.0, 1, 7, 0.4, 4.50, 'Hand-Cooked Jellies', 'Hand-cooked in-house kitchen prep (not bought pre-made)'),
+  ('Coconut Jelly', 'kg', 4.0, 2, 3, 0.6, 5.50, 'Hand-Cooked Jellies', 'Hand-cooked in-house kitchen prep (not bought pre-made)'),
+  ('Whole Milk', 'L', 12.0, 5, 3, 1.2, 1.90, 'Dairy & Milk', null),
+  ('Coconut Milk', 'L', 10.0, 3, 4, 1.5, 3.10, 'Dairy & Milk', null),
+  ('Brown Sugar', 'kg', 15.0, 3, 90, 0.8, 2.40, 'Dry Goods & Packaging', null),
+  ('Tapioca Pearls', 'kg', 8.0, 2, 60, 0.5, 3.20, 'Beans & Pearls', 'Fresh boba/tapioca pearls for sweet soup desserts'),
+  ('Mung Beans', 'kg', 6.0, 1, 30, 0.3, 2.80, 'Beans & Pearls', null),
+  ('Durian Pulp', 'kg', 4.0, 2, 4, 1.0, 14.00, 'Produce & Fruits', null),
+  ('Jackfruit', 'kg', 5.0, 1, 5, 0.8, 5.20, 'Produce & Fruits', null)
 on conflict do nothing;
+
+-- Official Chè Bông Menu Items (43 items across 6 categories, ready for Clover Webhook & manual recipe mapping)
+insert into clover_items (clover_id, name, category, price, is_active) values
+  -- Chè (Desserts)
+  ('CHE-1',  '1. Creamy Coconut Jelly', 'Chè (Desserts)', 7.90, true),
+  ('CHE-1A', '1A. Creamy Pandan Coco', 'Chè (Desserts)', 8.50, true),
+  ('CHE-1B', '1B. Flan Pandan Coco', 'Chè (Desserts)', 9.50, true),
+  ('CHE-2A', '2A. Chè Thai', 'Chè (Desserts)', 9.30, true),
+  ('CHE-2B', '2B. Chè Thai Flan (+durian 2)', 'Chè (Desserts)', 11.50, true),
+  ('CHE-2C', '2C. Chè Thai with Durian', 'Chè (Desserts)', 10.40, true),
+  ('CHE-3',  '3. Tofu Pudding', 'Chè (Desserts)', 7.00, true),
+  ('CHE-4',  '4. Traffic Light Che', 'Chè (Desserts)', 8.50, true),
+  ('CHE-5A', '5A. Flantastic Che', 'Chè (Desserts)', 8.50, true),
+  ('CHE-5B', '5B. Classic Flan with Pearls', 'Chè (Desserts)', 7.00, true),
+  ('CHE-5C', '5C. Deluxe Flantastic Che', 'Chè (Desserts)', 10.50, true),
+  ('CHE-6A', '6A. Strawberry Sago', 'Chè (Desserts)', 9.50, true),
+  ('CHE-6B', '6B. Mango Sago', 'Chè (Desserts)', 9.50, true),
+  ('CHE-7A', '7A. Grass Jelly with Taro Ball', 'Chè (Desserts)', 8.90, true),
+  ('CHE-7B', '7B. Grass Jelly with Mango Coco', 'Chè (Desserts)', 8.50, true),
+
+  -- Bánh Mì (Subs)
+  ('BM-B1', 'B1. Sate Chicken', 'Bánh Mì (Subs)', 11.00, true),
+  ('BM-B2', 'B2. Sate Beef', 'Bánh Mì (Subs)', 12.00, true),
+  ('BM-B3', 'B3. Grill Pork', 'Bánh Mì (Subs)', 11.00, true),
+  ('BM-B4', 'B4. Assorted Cold Cut', 'Bánh Mì (Subs)', 11.00, true),
+  ('BM-B5', 'B5. Veggie', 'Bánh Mì (Subs)', 9.50, true),
+
+  -- Giải Khát (Drinks)
+  ('GK-N1', 'N1. Dessert Drink (Mango, Strawberry, Avocado)', 'Giải Khát (Drinks)', 8.90, true),
+  ('GK-N2', 'N2. Avocado Coco Drink', 'Giải Khát (Drinks)', 7.00, true),
+  ('GK-N3', 'N3. Fruity Yakult (Mango, Strawberry)', 'Giải Khát (Drinks)', 7.90, true),
+  ('GK-N4', 'N4. Cocoa Latte (Hot/Cold)', 'Giải Khát (Drinks)', 6.50, true),
+  ('GK-N5', 'N5. Cocoa Latte Cloud (Hot/Cold)', 'Giải Khát (Drinks)', 7.00, true),
+  ('GK-N6', 'N6. Strawberry Cocoa Latte', 'Giải Khát (Drinks)', 7.50, true),
+
+  -- Viet Coffee
+  ('CF-01', 'Viet Espresso', 'Viet Coffee', 5.00, true),
+  ('CF-02', 'Viet Coffee (Hot/Cold)', 'Viet Coffee', 6.50, true),
+  ('CF-03', 'Viet White Coffee (+foam 1)', 'Viet Coffee', 6.50, true),
+  ('CF-04', 'Coconut Coffee', 'Viet Coffee', 7.00, true),
+  ('CF-05', 'Grass Jelly Coffee', 'Viet Coffee', 7.90, true),
+  ('CF-06', 'Salted Viet Coffee', 'Viet Coffee', 7.00, true),
+  ('CF-07', 'Salted Viet Flan Coffee', 'Viet Coffee', 8.50, true),
+  ('CF-08', 'Matcha Coffee Latte', 'Viet Coffee', 7.50, true),
+
+  -- Bubble Tea & Milk Tea
+  ('BT-01', 'Brown Sugar Pearls Latte', 'Bubble Tea & Milk Tea', 7.00, true),
+  ('BT-02', 'Flan Milk Tea Cloud (Thai/Original)', 'Bubble Tea & Milk Tea', 8.50, true),
+  ('BT-03', 'Pearls Milk Tea (Thai/Original)', 'Bubble Tea & Milk Tea', 7.00, true),
+  ('BT-04', 'Fruit Tea (Peach, Mango)', 'Bubble Tea & Milk Tea', 7.50, true),
+  ('BT-05', 'Bubble Tea (Mango, Strawberry, Avocado, Taro)', 'Bubble Tea & Milk Tea', 7.50, true),
+
+  -- Matcha Series (Additional Menu Items)
+  ('MT-01', 'Strawberry Matcha', 'Matcha Series', 7.50, true),
+  ('MT-02', 'Jasmine Matcha', 'Matcha Series', 7.50, true),
+  ('MT-03', 'Matcha Latte', 'Matcha Series', 7.00, true),
+  ('MT-04', 'Coco Matcha', 'Matcha Series', 7.50, true)
+on conflict (clover_id) do update
+set name = excluded.name,
+    category = excluded.category,
+    price = excluded.price,
+    is_active = excluded.is_active;
 
 -- ============================================================
 -- 6. SUPABASE REALTIME REPLICATION (MULTI-DEVICE LIVE SYNC)

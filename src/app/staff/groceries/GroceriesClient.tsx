@@ -11,6 +11,7 @@ export interface GroceryItem {
   name: string
   unit: string
   department: string
+  isHandCooked?: boolean
   totalStock: number
   daysLeft: number
   dailyUsage: number
@@ -31,8 +32,9 @@ const DEPARTMENTS = [
   'All',
   'Dairy & Milk',
   'Produce & Fruits',
-  'Jellies & Beans',
+  'Beans & Pearls',
   'Dry Goods & Packaging',
+  'Hand-Cooked Jellies',
 ] as const
 
 export default function GroceriesClient({ ingredients, isManagerView = false }: Props) {
@@ -361,22 +363,29 @@ export default function GroceriesClient({ ingredients, isManagerView = false }: 
             <div key={dept} className="space-y-3">
               {/* Department Section Header */}
               <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-base">
                     {dept === 'Dairy & Milk'
                       ? '🥛'
                       : dept === 'Produce & Fruits'
                       ? '🥑'
-                      : dept === 'Jellies & Beans'
+                      : dept === 'Hand-Cooked Jellies'
+                      ? '🍳'
+                      : dept === 'Beans & Pearls' || dept === 'Jellies & Beans'
                       ? '🧋'
                       : '📦'}
                   </span>
                   <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
                     {dept} ({items.length})
                   </h3>
+                  {dept === 'Hand-Cooked Jellies' && (
+                    <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
+                      Cooked In-House · Log Fresh Kitchen Batch
+                    </span>
+                  )}
                 </div>
                 <span className="text-[11px] text-gray-400">
-                  {items.filter((i) => checkedIds.has(i.id)).length}/{items.length} bought
+                  {items.filter((i) => checkedIds.has(i.id)).length}/{items.length} {dept === 'Hand-Cooked Jellies' ? 'prepped' : 'bought'}
                 </span>
               </div>
 
@@ -434,6 +443,12 @@ export default function GroceriesClient({ ingredients, isManagerView = false }: 
                             >
                               {item.name}
                             </span>
+
+                            {item.isHandCooked && (
+                              <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
+                                🍳 Hand-Cooked (In-House)
+                              </span>
+                            )}
 
                             {item.isBelowThreshold && (
                               <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shrink-0">

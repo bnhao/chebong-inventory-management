@@ -15,25 +15,31 @@ async function getSuggestedPurchases(): Promise<GroceryItem[]> {
     const suggestedQty = Math.max(0, Math.ceil(parLevel - totalStock))
     const isBelowThreshold = totalStock <= minThreshold
 
+    const n = ing.name.toLowerCase()
+    const isJelly = n.includes('jelly')
     let department = ing.category
-    if (!department) {
-      const n = ing.name.toLowerCase()
-      if (n.includes('milk') || n.includes('cream') || n.includes('condensed')) {
+    if (!department || (isJelly && department === 'Jellies & Beans')) {
+      if (isJelly) {
+        department = 'Hand-Cooked Jellies'
+      } else if (n.includes('milk') || n.includes('cream') || n.includes('condensed')) {
         department = 'Dairy & Milk'
       } else if (n.includes('durian') || n.includes('jackfruit') || n.includes('avocado') || n.includes('fruit')) {
         department = 'Produce & Fruits'
-      } else if (n.includes('jelly') || n.includes('bean') || n.includes('tapioca') || n.includes('pearl')) {
-        department = 'Jellies & Beans'
+      } else if (n.includes('bean') || n.includes('tapioca') || n.includes('pearl') || n.includes('sago')) {
+        department = 'Beans & Pearls'
       } else {
         department = 'Dry Goods & Packaging'
       }
     }
+
+    const isHandCooked = isJelly || department === 'Hand-Cooked Jellies'
 
     return {
       id: ing.id,
       name: ing.name,
       unit: ing.unit,
       department,
+      isHandCooked,
       totalStock,
       daysLeft,
       dailyUsage,
@@ -51,3 +57,4 @@ export default async function ManagerGroceriesPage() {
   const ingredients = await getSuggestedPurchases()
   return <GroceriesClient ingredients={ingredients} isManagerView={true} />
 }
+
