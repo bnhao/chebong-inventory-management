@@ -40,6 +40,7 @@ export async function fetchAllIngredientsWithBatches(): Promise<IngredientWithBa
       id: string
       name: string
       unit: string
+      category?: string | null
       low_stock_threshold: number
       spoiled_time_limit_days: number
       daily_usage_rate: number
@@ -85,6 +86,7 @@ export async function fetchAllIngredientsWithBatches(): Promise<IngredientWithBa
         id: ing.id,
         name: ing.name,
         unit: ing.unit || 'kg',
+        category: ing.category || null,
         low_stock_threshold: Number(ing.low_stock_threshold) || 0,
         spoiled_time_limit_days: Number(ing.spoiled_time_limit_days) || 7,
         daily_usage_rate: Number(ing.daily_usage_rate) || 0,

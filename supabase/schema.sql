@@ -32,6 +32,7 @@ alter table ingredients add column if not exists low_stock_threshold numeric not
 alter table ingredients add column if not exists spoiled_time_limit_days integer not null default 7;
 alter table ingredients add column if not exists daily_usage_rate numeric not null default 0;
 alter table ingredients add column if not exists cost_per_unit numeric not null default 0;
+alter table ingredients add column if not exists category text;
 alter table ingredients add column if not exists description text;
 alter table ingredients add column if not exists updated_at timestamptz default now();
 

@@ -69,7 +69,7 @@ const navItems: NavItem[] = [
   { href: '/manager/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { href: '/manager/recipes', label: 'Recipes & Clover', icon: RecipeIcon },
   { href: '/manager/thresholds', label: 'Thresholds', icon: ThresholdIcon },
-  { href: '/staff/groceries', label: 'Groceries', icon: GroceriesIcon },
+  { href: '/manager/groceries', label: 'Groceries', icon: GroceriesIcon },
   { href: '/manager/reports', label: 'Logs & Audits', icon: ReportIcon },
 ]
 
