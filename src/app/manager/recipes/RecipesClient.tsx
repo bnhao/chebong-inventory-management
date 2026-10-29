@@ -9,6 +9,7 @@ interface IngredientWithStock {
   id: string
   name: string
   unit: string
+  category?: string
   cost_per_unit: number
   low_stock_threshold: number
   daily_usage_rate: number
@@ -20,6 +21,16 @@ interface Props {
   ingredients: IngredientWithStock[]
 }
 
+const MENU_CATEGORIES = [
+  'All',
+  'Chè (Desserts)',
+  'Bánh Mì (Subs)',
+  'Giải Khát (Drinks)',
+  'Viet Coffee',
+  'Bubble Tea & Milk Tea',
+  'Matcha Series',
+] as const
+
 export default function RecipesClient({ initialCloverItems, ingredients }: Props) {
   const router = useRouter()
   const supabase = createClient()
@@ -27,12 +38,17 @@ export default function RecipesClient({ initialCloverItems, ingredients }: Props
   const [cloverItems, setCloverItems] = useState<CloverItem[]>(initialCloverItems)
   const [selectedItemForRecipe, setSelectedItemForRecipe] = useState<CloverItem | null>(null)
 
+  // Menu Filtering & Search state
+  const [selectedCategory, setSelectedCategory] = useState<string>('All')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [mappingFilter, setMappingFilter] = useState<'ALL' | 'UNMAPPED' | 'MAPPED'>('ALL')
+
   // New Clover Item Modal state
   const [showAddItemModal, setShowAddItemModal] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [newItemCloverId, setNewItemCloverId] = useState('')
   const [newItemPrice, setNewItemPrice] = useState('')
-  const [newItemCategory, setNewItemCategory] = useState('Chè Desserts')
+  const [newItemCategory, setNewItemCategory] = useState('Chè (Desserts)')
   const [isSavingItem, setIsSavingItem] = useState(false)
 
   // Recipe editing state inside modal
@@ -45,6 +61,26 @@ export default function RecipesClient({ initialCloverItems, ingredients }: Props
   const [isCommittingSales, setIsCommittingSales] = useState(false)
   const [salesSuccessMsg, setSalesSuccessMsg] = useState('')
   const [salesErrorMsg, setSalesErrorMsg] = useState('')
+
+  // Filtered Clover Items for Menu & Recipe Mapping
+  const filteredCloverItems = useMemo(() => {
+    return cloverItems.filter((item) => {
+      if (selectedCategory !== 'All' && item.category !== selectedCategory) {
+        return false
+      }
+      const hasIngredients = item.recipe_ingredients && item.recipe_ingredients.length > 0
+      if (mappingFilter === 'MAPPED' && !hasIngredients) return false
+      if (mappingFilter === 'UNMAPPED' && hasIngredients) return false
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = item.name.toLowerCase().includes(q)
+        const matchesId = (item.clover_id || '').toLowerCase().includes(q)
+        const matchesCat = (item.category || '').toLowerCase().includes(q)
+        if (!matchesName && !matchesId && !matchesCat) return false
+      }
+      return true
+    })
+  }, [cloverItems, selectedCategory, mappingFilter, searchQuery])
 
   // Compute live ingredient deficits based on sales inputs
   const deficitAnalysis = useMemo(() => {
@@ -249,33 +285,110 @@ export default function RecipesClient({ initialCloverItems, ingredients }: Props
   return (
     <div className="space-y-8">
       {/* Top Controls & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
-        <div>
-          <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
-            Recipe & Clover POS Item Mapping
-          </h2>
-          <p className="text-xs text-gray-500 mt-1 max-w-2xl">
-            Map POS menu items to raw ingredients. The system directly calculates ingredient deficits and automates inventory deductions per Clover sale without complex POS modifiers.
-          </p>
+      <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
+              Official Chè Bông Menu & Clover POS Recipe Mapping
+            </h2>
+            <p className="text-xs text-gray-500 mt-1 max-w-2xl">
+              All {cloverItems.length} menu items ready for Clover webhook connection. Click <strong>Edit Recipe</strong> on any item to map raw ingredients or hand-cooked jellies per serving.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setShowAddItemModal(true)}
+            className="inline-flex items-center gap-2 bg-[#e85d04] hover:bg-[#d45203] text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-98 shrink-0"
+          >
+            <span>＋</span> Add Clover Item
+          </button>
         </div>
 
-        <button
-          onClick={() => setShowAddItemModal(true)}
-          className="inline-flex items-center gap-2 bg-[#e85d04] hover:bg-[#d45203] text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-98 shrink-0"
-        >
-          <span>＋</span> Add Clover Item
-        </button>
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+          {MENU_CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat
+            const count =
+              cat === 'All'
+                ? cloverItems.length
+                : cloverItems.filter((i) => i.category === cat).length
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-gray-900 text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
+                }`}
+              >
+                <span>{cat}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-white text-gray-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Search & Mapping Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <input
+              type="text"
+              placeholder="Search menu item (e.g. Chè Thai, Matcha, B1, CHE-1A)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2 text-xs text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            {(['ALL', 'UNMAPPED', 'MAPPED'] as const).map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setMappingFilter(status)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                  mappingFilter === status
+                    ? 'bg-orange-50 text-[#e85d04] border-orange-200'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {status === 'ALL'
+                  ? 'All Items'
+                  : status === 'UNMAPPED'
+                  ? 'Needs Recipe'
+                  : 'Mapped'}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* MOBILE CARD VIEW: Clover Items for phones */}
       <div className="block md:hidden space-y-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            Clover Items ({cloverItems.length})
+            Menu Items ({filteredCloverItems.length})
           </h3>
           <span className="text-[11px] text-gray-400">Mobile View</span>
         </div>
-        {cloverItems.map((item) => (
+        {filteredCloverItems.map((item) => (
           <div
             key={item.id}
             className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 space-y-3"
@@ -336,9 +449,9 @@ export default function RecipesClient({ initialCloverItems, ingredients }: Props
       <div className="hidden md:block bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
-            Active Clover Items ({cloverItems.length})
+            Active Menu Items ({filteredCloverItems.length} of {cloverItems.length})
           </h3>
-          <span className="text-xs text-gray-400 font-medium">Desktop Data Grid</span>
+          <span className="text-xs text-gray-400 font-medium">Clover Webhook Ready · Desktop Data Grid</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -354,7 +467,7 @@ export default function RecipesClient({ initialCloverItems, ingredients }: Props
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
-              {cloverItems.map((item) => (
+              {filteredCloverItems.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/60 transition-colors">
                   <td className="py-3.5 px-5 font-bold text-gray-900">
                     {item.name}
@@ -595,11 +708,14 @@ export default function RecipesClient({ initialCloverItems, ingredients }: Props
                   required
                 >
                   <option value="">Select ingredient...</option>
-                  {ingredients.map((ing) => (
-                    <option key={ing.id} value={ing.id}>
-                      {ing.name} ({ing.unit})
-                    </option>
-                  ))}
+                  {ingredients.map((ing) => {
+                    const isJelly = ing.name.toLowerCase().includes('jelly') || ing.category === 'Hand-Cooked Jellies'
+                    return (
+                      <option key={ing.id} value={ing.id}>
+                        {ing.name} ({ing.unit}){isJelly ? ' · 🍳 Hand-Cooked' : ''}
+                      </option>
+                    )
+                  })}
                 </select>
 
                 <div className="flex gap-2">
@@ -696,12 +812,17 @@ export default function RecipesClient({ initialCloverItems, ingredients }: Props
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                     Category
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={newItemCategory}
                     onChange={(e) => setNewItemCategory(e.target.value)}
                     className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
-                  />
+                  >
+                    {MENU_CATEGORIES.filter((c) => c !== 'All').map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

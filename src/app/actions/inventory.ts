@@ -266,3 +266,67 @@ export async function updateIngredientAction(input: UpdateIngredientInput) {
   }
 }
 
+// 5. BATCH RESTOCK ACTION (For 'Restock Checked' grocery shopping runs)
+export interface BatchRestockItem {
+  ingredientId: string
+  quantity: number
+  unitCost?: number
+}
+
+export async function submitBatchRestockAction(items: BatchRestockItem[], locationOrNote?: string) {
+  try {
+    const supabase = await createClient()
+    if (!items || items.length === 0) {
+      return { success: false, error: 'No items selected to restock' }
+    }
+
+    const now = new Date()
+    const defaultExp = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    const batchGroupCode = `GROCERY-${Date.now().toString().slice(-6)}`
+
+    for (const item of items) {
+      if (item.quantity <= 0) continue
+
+      const { data: batch, error: batchErr } = await supabase
+        .from('inventory_batches')
+        .insert({
+          ingredient_id: item.ingredientId,
+          batch_code: batchGroupCode,
+          quantity_received: item.quantity,
+          quantity_remaining: item.quantity,
+          cost_per_unit: item.unitCost || 0,
+          expiration_date: defaultExp,
+          status: 'ACTIVE',
+        })
+        .select()
+        .single()
+
+      if (batchErr) {
+        console.error('Batch error:', batchErr)
+        continue
+      }
+
+      await supabase
+        .from('inventory_transactions')
+        .insert({
+          ingredient_id: item.ingredientId,
+          batch_id: batch?.id || null,
+          transaction_type: 'RESTOCK',
+          quantity_change: item.quantity,
+          reason: locationOrNote || 'Restocked from grocery run (Costco / Asian Market)',
+          reference_id: batchGroupCode,
+        })
+    }
+
+    revalidatePath('/staff/dashboard')
+    revalidatePath('/staff/restock')
+    revalidatePath('/staff/groceries')
+    revalidatePath('/manager/dashboard')
+    revalidatePath('/manager/reports')
+
+    return { success: true, count: items.length }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Batch restock failed' }
+  }
+}
+

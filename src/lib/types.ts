@@ -7,6 +7,7 @@ export interface Ingredient {
   id: string
   name: string
   unit: string
+  category?: string | null
   low_stock_threshold: number
   spoiled_time_limit_days: number
   daily_usage_rate: number

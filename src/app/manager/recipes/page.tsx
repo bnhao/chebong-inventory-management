@@ -33,7 +33,8 @@ async function getRecipesData() {
         )
       )
     `)
-    .order('name', { ascending: true })
+    .eq('is_active', true)
+    .order('clover_id', { ascending: true })
 
   // 2. Fetch all ingredients with batches for deficit engine
   const ingredientsWithBatches = await fetchAllIngredientsWithBatches()
@@ -42,6 +43,7 @@ async function getRecipesData() {
     id: ing.id,
     name: ing.name,
     unit: ing.unit,
+    category: ing.category || '',
     cost_per_unit: Number(ing.cost_per_unit) || 0,
     low_stock_threshold: Number(ing.low_stock_threshold) || 0,
     daily_usage_rate: Number(ing.daily_usage_rate) || 0,
