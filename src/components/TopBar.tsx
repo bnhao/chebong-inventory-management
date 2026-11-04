@@ -10,7 +10,7 @@ export default function TopBar() {
   const isManager = pathname.startsWith('/manager')
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-2xs pt-safe">
+    <header className="sticky top-0 z-40 surface-glass pt-safe">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo & Name */}
@@ -24,7 +24,7 @@ export default function TopBar() {
                 src="/chebong-bowl.png"
                 alt="CB Inventory Logo"
                 fill
-                className="object-contain transition-transform group-hover:scale-105"
+                className="object-contain logo-drop-shadow transition-transform duration-300 ease-out group-hover:scale-108 group-hover:-rotate-3"
                 priority
                 sizes="40px"
               />
@@ -37,23 +37,23 @@ export default function TopBar() {
           </Link>
 
           {/* Role Toggle Pill (Staff View / Manager View) */}
-          <div className="flex items-center bg-gray-100 rounded-full p-1 gap-1">
+          <div className="flex items-center bg-gray-100/90 border border-gray-200/70 shadow-inner rounded-full p-1 gap-1">
             <button
               onClick={() => router.push('/staff/dashboard')}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
+              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 ${
                 !isManager
-                  ? 'bg-[#e85d04] text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'btn-tactile-primary text-white'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
               }`}
             >
               Staff View
             </button>
             <button
               onClick={() => router.push('/manager/dashboard')}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
+              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 ${
                 isManager
-                  ? 'bg-[#e85d04] text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'btn-tactile-primary text-white'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
               }`}
             >
               Manager View

@@ -8,14 +8,14 @@ export default function StaffLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gray-50/70 text-gray-900 flex flex-col justify-between">
+    <div className="min-h-screen bg-app-canvas text-gray-900 flex flex-col justify-between">
       <div>
         {/* Universal Sticky TopBar */}
         <TopBar />
 
         {/* Responsive Main Container: Full width on mobile, max-w-7xl on desktop */}
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <main className="pb-24 md:pb-8 min-h-[calc(100vh-14rem)]">
+          <main className="pb-24 md:pb-8 min-h-[calc(100vh-14rem)] enter-fade-up">
             {children}
           </main>
         </div>

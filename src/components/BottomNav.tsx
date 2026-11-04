@@ -102,7 +102,7 @@ export default function BottomNav() {
   const items = isManager ? managerNavItems : staffNavItems
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200/80 md:hidden shadow-lg select-none pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 surface-glass border-t border-gray-200/80 md:hidden select-none pb-safe">
       <div className="flex items-center justify-around h-16 px-2 max-w-md mx-auto">
         {items.map(({ href, label, Icon }) => {
           const active = pathname === href || (href !== '/staff/dashboard' && href !== '/manager/dashboard' && pathname.startsWith(href))
@@ -111,14 +111,20 @@ export default function BottomNav() {
               key={href}
               href={href}
               prefetch={true}
-              className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] px-2 py-1.5 rounded-xl transition-all active:scale-95 ${
-                active ? 'text-[#e85d04]' : 'text-gray-500'
+              className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] px-2 py-1.5 rounded-xl transition-all duration-200 active:scale-95 ${
+                active ? 'text-[#e85d04]' : 'text-gray-500 hover:text-gray-800'
               }`}
             >
-              <div className={`p-1 rounded-lg ${active ? 'bg-orange-50' : ''}`}>
+              <div
+                className={`p-1 rounded-lg transition-all duration-200 ${
+                  active
+                    ? 'bg-orange-50 shadow-2xs ring-1 ring-orange-200/70 -translate-y-0.5 scale-105'
+                    : ''
+                }`}
+              >
                 <Icon active={active} />
               </div>
-              <span className={`text-[10px] font-bold ${active ? 'text-[#e85d04]' : 'text-gray-500'}`}>
+              <span className={`text-[10px] font-bold transition-colors ${active ? 'text-[#e85d04]' : 'text-gray-500'}`}>
                 {label}
               </span>
             </Link>

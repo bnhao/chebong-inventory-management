@@ -63,7 +63,7 @@ export default function StaffDesktopNav() {
 
   return (
     <div className="hidden md:flex items-center gap-2">
-      <div className="flex items-center bg-white border border-gray-200/80 rounded-2xl p-1 shadow-xs">
+      <div className="flex items-center surface-card rounded-2xl p-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/staff/dashboard' && pathname.startsWith(item.href))
           return (
@@ -71,13 +71,15 @@ export default function StaffDesktopNav() {
               key={item.href}
               href={item.href}
               prefetch={true}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                 isActive
-                  ? 'bg-orange-50 text-[#e85d04] border border-orange-200/60 shadow-xs'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-linear-to-b from-orange-50 to-orange-100/70 text-[#e85d04] border border-orange-200/80 shadow-2xs'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/90'
               }`}
             >
-              {item.icon(isActive)}
+              <span className={`transition-transform duration-200 ${isActive ? 'scale-105' : ''}`}>
+                {item.icon(isActive)}
+              </span>
               <span>{item.label}</span>
             </Link>
           )
@@ -85,7 +87,7 @@ export default function StaffDesktopNav() {
       </div>
 
       {/* Staff Profile Avatar */}
-      <div className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center shrink-0 shadow-xs ml-1">
+      <div className="w-10 h-10 rounded-full surface-card flex items-center justify-center shrink-0 ml-1 transition-transform duration-200 hover:scale-105">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>

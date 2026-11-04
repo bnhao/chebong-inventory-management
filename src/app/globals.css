@@ -3,6 +3,18 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-orange: #e85d04;
+  --brand-orange-bright: #f46b12;
+  --brand-orange-deep: #d45203;
+  --in-oklab: ;
+  --in-oklch: ;
+}
+
+@supports (background: linear-gradient(in oklab, white, black)) {
+  :root {
+    --in-oklab: in oklab;
+    --in-oklch: in oklch;
+  }
 }
 
 body {
@@ -45,4 +57,192 @@ input, textarea, [contenteditable="true"], .selectable-text {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* ============================================================================
+   Ambient Canvas Texture & Lighting
+   ============================================================================ */
+.bg-app-canvas {
+  --dot-color: rgba(15, 23, 42, 0.042);
+  --dot-space: 22px;
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(circle, var(--dot-color) 1px, transparent 0),
+    radial-gradient(60rem 34rem at 10% -6% var(--in-oklab), rgba(232, 93, 4, 0.068), transparent 72%),
+    radial-gradient(50rem 32rem at 92% 104% var(--in-oklab), rgba(22, 163, 74, 0.045), transparent 72%);
+  background-size: var(--dot-space) var(--dot-space), 100% 100%, 100% 100%;
+  background-attachment: fixed;
+}
+
+/* ============================================================================
+   Layered Surface Depth & Tactile Elevation
+   ============================================================================ */
+.surface-card {
+  background: linear-gradient(to bottom var(--in-oklab), #ffffff, #fcfcfd);
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px 0 rgba(15, 23, 42, 0.035),
+    0 4px 12px -2px rgba(15, 23, 42, 0.045),
+    0 12px 24px -6px rgba(15, 23, 42, 0.03);
+}
+
+.surface-card-interactive {
+  background: linear-gradient(to bottom var(--in-oklab), #ffffff, #fcfcfd);
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px 0 rgba(15, 23, 42, 0.035),
+    0 4px 12px -2px rgba(15, 23, 42, 0.045),
+    0 12px 24px -6px rgba(15, 23, 42, 0.03);
+  translate: 0 0;
+  transition:
+    translate 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.22s ease;
+
+  &:hover:not(:disabled) {
+    translate: 0 -2px;
+    border-color: rgba(232, 93, 4, 0.28);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      0 2px 4px -1px rgba(15, 23, 42, 0.04),
+      0 8px 20px -4px rgba(232, 93, 4, 0.085),
+      0 16px 32px -8px rgba(15, 23, 42, 0.06);
+  }
+
+  &:active:not(:disabled) {
+    translate: 0 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    &:hover:not(:disabled) {
+      translate: none;
+    }
+  }
+}
+
+.surface-glass {
+  background: linear-gradient(to bottom var(--in-oklab), rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.84));
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow:
+    inset 0 -1px 0 0 rgba(226, 232, 240, 0.75),
+    0 2px 8px -2px rgba(15, 23, 42, 0.04),
+    0 8px 20px -6px rgba(15, 23, 42, 0.03);
+}
+
+.surface-accent-warm {
+  isolation: isolate;
+  background-image:
+    repeating-linear-gradient(-45deg, rgba(232, 93, 4, 0.045) 0 10px, transparent 0 20px),
+    linear-gradient(135deg var(--in-oklab), #fff7ed, #ffedd5 55%, #fef3c7);
+  background-blend-mode: soft-light, normal;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+    0 2px 6px -1px rgba(232, 93, 4, 0.07),
+    0 10px 22px -6px rgba(232, 93, 4, 0.06);
+}
+
+/* ============================================================================
+   Tactile Buttons & Transparent PNG Drop Shadows
+   ============================================================================ */
+.btn-tactile-primary {
+  background: linear-gradient(to bottom var(--in-oklab), var(--brand-orange-bright), var(--brand-orange) 60%, var(--brand-orange-deep));
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.28),
+    0 1px 2px 0 rgba(15, 23, 42, 0.12),
+    0 4px 12px -2px rgba(232, 93, 4, 0.36);
+  translate: 0 0;
+  transition:
+    translate 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+
+  &:hover:not(:disabled) {
+    translate: 0 -1px;
+    filter: brightness(1.03);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+      0 2px 4px 0 rgba(15, 23, 42, 0.14),
+      0 8px 18px -3px rgba(232, 93, 4, 0.45);
+  }
+
+  &:active:not(:disabled) {
+    translate: 0 0.5px;
+    box-shadow:
+      inset 0 1px 2px 0 rgba(0, 0, 0, 0.16),
+      0 1px 3px 0 rgba(232, 93, 4, 0.25);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+    &:hover:not(:disabled),
+    &:active:not(:disabled) {
+      translate: none;
+    }
+  }
+}
+
+.logo-drop-shadow {
+  filter:
+    drop-shadow(0 2px 4px rgba(232, 93, 4, 0.22))
+    drop-shadow(0 1px 2px rgba(15, 23, 42, 0.12));
+}
+
+/* ============================================================================
+   Declarative Entry & Ambient Motion (Compositor-Friendly)
+   ============================================================================ */
+.enter-fade-up {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    translate 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    translate: none;
+    transition-duration: 0.12s;
+  }
+}
+
+@starting-style {
+  .enter-fade-up {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @starting-style {
+    .enter-fade-up {
+      translate: none;
+    }
+  }
+}
+
+.stagger-1 { transition-delay: 35ms; }
+.stagger-2 { transition-delay: 75ms; }
+.stagger-3 { transition-delay: 115ms; }
+.stagger-4 { transition-delay: 155ms; }
+
+@keyframes pulseUrgentGlow {
+  0%, 100% {
+    scale: 1;
+    opacity: 1;
+  }
+  50% {
+    scale: 1.16;
+    opacity: 0.78;
+  }
+}
+
+.pulse-ring-urgent {
+  animation: pulseUrgentGlow 2.4s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 
