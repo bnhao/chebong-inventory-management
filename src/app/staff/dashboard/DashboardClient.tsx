@@ -53,6 +53,13 @@ function getShiftLabel(): string {
   return 'Evening shift'
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 function getFormattedDate(): string {
   return new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -126,8 +133,9 @@ export default function DashboardClient({ data }: Props) {
             {getFormattedDate()} · {getShiftLabel()}
           </p>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
-            Staff Dashboard
+            {getGreeting()} 👋
           </h1>
+          <p className="text-sm text-gray-500 mt-1">Here&apos;s what needs your attention today.</p>
         </div>
 
         {/* Desktop Navigation (visible on >= md, hidden on mobile) */}
@@ -141,10 +149,41 @@ export default function DashboardClient({ data }: Props) {
         </div>
       </div>
 
+      {/* Friendly status hero: one plain-language summary + one clear next step */}
+      <div
+        className={`enter-fade-up rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+          data.alerts.length === 0
+            ? 'bg-linear-to-br from-green-50 to-emerald-100/60 border border-green-200/80 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8),0_8px_24px_-8px_rgba(22,163,74,0.18)]'
+            : 'surface-accent-warm'
+        }`}
+      >
+        <div className="flex items-center gap-4">
+          <div className="text-4xl">{data.alerts.length === 0 ? '🎉' : '🛒'}</div>
+          <div>
+            <p className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">
+              {data.alerts.length === 0
+                ? "You're all set!"
+                : `${data.alerts.length} ${data.alerts.length === 1 ? 'item needs' : 'items need'} a look`}
+            </p>
+            <p className="text-sm text-gray-600 mt-0.5">
+              {data.alerts.length === 0
+                ? 'Everything is stocked and fresh. Nice work.'
+                : `${lowStockCount} running low · ${expiringCount} expiring soon`}
+            </p>
+          </div>
+        </div>
+        <Link
+          href={data.alerts.length === 0 ? '/staff/cycle-count' : '/staff/groceries'}
+          className="btn-tactile-primary text-white font-bold text-sm px-5 py-3 rounded-xl text-center shrink-0"
+        >
+          {data.alerts.length === 0 ? 'Start today’s count' : 'See what to buy'}
+        </Link>
+      </div>
+
       {/* Responsive Grid: 1 column on mobile, 12-column split on desktop (Figma layout) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (7 cols on lg:) - ALERTS, QUICK ACTIONS, CYCLE COUNT */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-6 enter-fade-up stagger-1">
           {/* ALERTS Section (Compacted to 3 newest with See More option & counter summarized in header) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -153,7 +192,7 @@ export default function DashboardClient({ data }: Props) {
                   ALERTS
                 </span>
                 {data.alerts.length > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-200">
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-200 shadow-2xs">
                     {data.alerts.length}
                   </span>
                 )}
@@ -166,10 +205,10 @@ export default function DashboardClient({ data }: Props) {
             </div>
 
             {data.alerts.length === 0 ? (
-              <div className="bg-green-50 border border-green-200/80 rounded-2xl p-4 flex items-center gap-3">
+              <div className="bg-linear-to-r from-green-50 to-emerald-50/60 border border-green-200/80 rounded-2xl p-4 flex items-center gap-3 shadow-xs enter-fade-up">
                 <span className="text-xl">✅</span>
                 <div>
-                  <p className="text-sm font-bold text-green-900">All stocked & fresh</p>
+                  <p className="text-sm font-bold text-green-900">All stocked &amp; fresh</p>
                   <p className="text-xs text-green-700">No ingredients below minimum threshold or nearing expiration.</p>
                 </div>
               </div>
@@ -181,7 +220,7 @@ export default function DashboardClient({ data }: Props) {
                     return (
                       <div
                         key={alert.id}
-                        className="bg-[#fffbeb] border border-[#fef08a] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs transition-all hover:border-amber-300"
+                        className="enter-fade-up bg-linear-to-r from-[#fffbeb] via-[#fffbeb] to-[#fef3c7]/50 border border-[#fde68a] rounded-2xl p-4 flex items-start gap-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),0_2px_8px_-2px_rgba(217,119,6,0.1)] transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md"
                       >
                         <div className="text-amber-500 text-lg shrink-0 mt-0.5">⚠️</div>
                         <div className="flex-1 min-w-0">
@@ -200,9 +239,9 @@ export default function DashboardClient({ data }: Props) {
                   return (
                     <div
                       key={alert.id}
-                      className="bg-[#fef2f2] border border-[#fecaca] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs transition-all hover:border-red-300"
+                      className="enter-fade-up bg-linear-to-r from-[#fef2f2] via-[#fef2f2] to-[#fee2e2]/45 border border-[#fecaca] rounded-2xl p-4 flex items-start gap-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),0_2px_8px_-2px_rgba(220,38,38,0.1)] transition-all duration-200 hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md"
                     >
-                      <div className="w-4 h-4 rounded-full bg-red-600 mt-1 shrink-0 ring-4 ring-red-100" />
+                      <div className="w-4 h-4 rounded-full bg-red-600 mt-1 shrink-0 ring-4 ring-red-100 pulse-ring-urgent" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm sm:text-base font-bold text-[#991b1b]">
                           {alert.message}
@@ -220,7 +259,7 @@ export default function DashboardClient({ data }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowAllAlerts(!showAllAlerts)}
-                    className="w-full py-2.5 px-4 bg-white hover:bg-gray-50 border border-gray-200/90 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 transition-all flex items-center justify-center gap-1.5 shadow-2xs active:scale-98"
+                    className="w-full py-2.5 px-4 surface-card-interactive rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 flex items-center justify-center gap-1.5"
                   >
                     <span>
                       {showAllAlerts
@@ -251,9 +290,9 @@ export default function DashboardClient({ data }: Props) {
               {/* Log Waste */}
               <button
                 onClick={() => router.push('/staff/waste')}
-                className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200/80 rounded-2xl shadow-xs hover:border-gray-300 hover:shadow-sm active:scale-98 transition-all group"
+                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
               >
-                <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-500 mb-2 group-hover:scale-105 transition-transform">
+                <div className="w-12 h-12 rounded-xl bg-linear-to-b from-red-50 to-red-100/70 border border-red-200/60 shadow-2xs flex items-center justify-center text-red-500 mb-2 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-200">
                   <TrashIcon />
                 </div>
                 <span className="text-xs font-bold text-gray-800">Log Waste</span>
@@ -269,9 +308,9 @@ export default function DashboardClient({ data }: Props) {
                     router.push('/staff/restock')
                   }
                 }}
-                className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200/80 rounded-2xl shadow-xs hover:border-gray-300 hover:shadow-sm active:scale-98 transition-all group"
+                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
               >
-                <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-[#e85d04] mb-2 group-hover:scale-105 transition-transform">
+                <div className="w-12 h-12 rounded-xl bg-linear-to-b from-orange-50 to-orange-100/70 border border-orange-200/60 shadow-2xs flex items-center justify-center text-[#e85d04] mb-2 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-200">
                   <PlusIcon />
                 </div>
                 <span className="text-xs font-bold text-gray-800">Manual Restock</span>
@@ -280,9 +319,9 @@ export default function DashboardClient({ data }: Props) {
               {/* Perform Cycle Count */}
               <button
                 onClick={() => router.push('/staff/cycle-count')}
-                className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200/80 rounded-2xl shadow-xs hover:border-gray-300 hover:shadow-sm active:scale-98 transition-all group"
+                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
               >
-                <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-[#2e7d32] mb-2 group-hover:scale-105 transition-transform">
+                <div className="w-12 h-12 rounded-xl bg-linear-to-b from-green-50 to-green-100/70 border border-green-200/60 shadow-2xs flex items-center justify-center text-[#2e7d32] mb-2 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-200">
                   <CheckSquareIcon />
                 </div>
                 <span className="text-xs font-bold text-gray-800 text-center">Perform Cycle Count</span>
@@ -291,27 +330,28 @@ export default function DashboardClient({ data }: Props) {
           </div>
 
           {/* CYCLE COUNT Section (Figma exact match) */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 space-y-4">
+          <div className="surface-card rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">Cycle Count</h3>
               <Link
                 href="/staff/cycle-count"
-                className="text-xs font-semibold text-[#e85d04] hover:underline"
+                className="text-xs font-semibold text-[#e85d04] hover:underline inline-flex items-center gap-1 group"
               >
-                Start Audit →
+                <span>Start Audit</span>
+                <span className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
               </Link>
             </div>
 
             <div className="divide-y divide-gray-100">
               {data.cycleCountStatus.map((item, idx) => (
-                <div key={idx} className="py-3 flex items-center justify-between first:pt-0 last:pb-0">
+                <div key={idx} className="py-3 px-2 -mx-2 rounded-xl hover:bg-gray-50/80 transition-colors flex items-center justify-between first:pt-0 last:pb-0">
                   <span className="text-sm font-semibold text-gray-800">{item.name}</span>
                   {item.status === 'counted' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-[#2e7d32] border border-green-200/60">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-[#2e7d32] border border-green-200/70 shadow-2xs">
                       Counted · {item.countedQty} {item.unit}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100/90 text-gray-500 border border-gray-200/60">
                       Pending
                     </span>
                   )}
@@ -322,21 +362,21 @@ export default function DashboardClient({ data }: Props) {
         </div>
 
         {/* Right Column (5 cols on lg:) - Manual Restock Card (Figma exact match) */}
-        <div id="staff-restock-panel" className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 sm:p-6 space-y-5">
+        <div id="staff-restock-panel" className="lg:col-span-5 space-y-6 enter-fade-up stagger-2">
+          <div className="surface-card rounded-2xl p-5 sm:p-6 space-y-5">
             <div>
               <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">Manual Restock</h2>
               <p className="text-xs text-gray-500 mt-0.5">Log a delivery as it arrives.</p>
             </div>
 
             {submitSuccess && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-xs font-medium flex items-center gap-2">
+              <div className="enter-fade-up p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-xs font-medium flex items-center gap-2 shadow-2xs">
                 <span>✓</span> Restock logged successfully into system!
               </div>
             )}
 
             {submitError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium">
+              <div className="enter-fade-up p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium shadow-2xs">
                 {submitError}
               </div>
             )}
@@ -351,7 +391,7 @@ export default function DashboardClient({ data }: Props) {
                   <select
                     value={selectedIngredientId}
                     onChange={(e) => setSelectedIngredientId(e.target.value)}
-                    className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent pr-10 shadow-2xs"
+                    className="w-full appearance-none bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent pr-10 shadow-2xs transition-colors"
                     required
                   >
                     <option value="">Select ingredient...</option>
@@ -381,7 +421,7 @@ export default function DashboardClient({ data }: Props) {
                   placeholder="0"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs"
+                  className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs transition-colors"
                   required
                 />
               </div>
@@ -395,7 +435,7 @@ export default function DashboardClient({ data }: Props) {
                   type="date"
                   value={expirationDate}
                   onChange={(e) => setExpirationDate(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs"
+                  className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs transition-colors"
                 />
                 <p className="text-[11px] text-gray-400">Enforces spoiled time limit and automated warnings.</p>
               </div>
@@ -404,7 +444,7 @@ export default function DashboardClient({ data }: Props) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-[#e85d04] hover:bg-[#d45203] text-white font-bold py-3.5 rounded-xl text-sm shadow-sm active:scale-98 transition-all disabled:opacity-50"
+                className="w-full btn-tactile-primary text-white font-bold py-3.5 rounded-xl text-sm disabled:opacity-50"
               >
                 {isSubmitting ? 'Submitting Restock...' : 'Submit Restock'}
               </button>

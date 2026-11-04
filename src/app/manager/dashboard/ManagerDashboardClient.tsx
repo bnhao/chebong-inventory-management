@@ -92,8 +92,8 @@ export default function ManagerDashboardClient({ data }: Props) {
     <div className="space-y-6">
       {/* High-level KPI Stats Grid for Managers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-4 sm:p-5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Valuation</p>
+        <div className="surface-card-interactive rounded-2xl p-4 sm:p-5 enter-fade-up stagger-1">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inventory Value</p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl sm:text-3xl font-extrabold text-gray-900">
               ${data.totalValuation.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -102,8 +102,8 @@ export default function ManagerDashboardClient({ data }: Props) {
           <p className="text-xs text-gray-400 mt-1.5">{data.totalItems} managed ingredients</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-4 sm:p-5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Low Stock Alerts</p>
+        <div className="surface-card-interactive rounded-2xl p-4 sm:p-5 enter-fade-up stagger-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Running Low</p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className={`text-2xl sm:text-3xl font-extrabold ${data.lowStockCount > 0 ? 'text-[#e85d04]' : 'text-gray-900'}`}>
               {data.lowStockCount}
@@ -111,12 +111,12 @@ export default function ManagerDashboardClient({ data }: Props) {
             <span className="text-xs text-gray-400">items</span>
           </div>
           <p className="text-xs text-orange-600 font-medium mt-1.5">
-            {data.lowStockCount > 0 ? 'Immediate reorder recommended' : 'Stock levels optimal'}
+            {data.lowStockCount > 0 ? 'Time to reorder' : 'Stock looks good'}
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-4 sm:p-5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Expiring / Spoiled</p>
+        <div className="surface-card-interactive rounded-2xl p-4 sm:p-5 enter-fade-up stagger-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Use Soon</p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className={`text-2xl sm:text-3xl font-extrabold ${data.expiringCount + data.spoiledCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
               {data.expiringCount + data.spoiledCount}
@@ -128,8 +128,8 @@ export default function ManagerDashboardClient({ data }: Props) {
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-4 sm:p-5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Audit Adherence</p>
+        <div className="surface-card-interactive rounded-2xl p-4 sm:p-5 enter-fade-up stagger-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Counts Done Today</p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl sm:text-3xl font-extrabold text-[#2e7d32]">
               {data.cycleCountStatus.filter((c) => c.status === 'counted').length} / {data.cycleCountStatus.length}
@@ -250,7 +250,7 @@ export default function ManagerDashboardClient({ data }: Props) {
               {/* Log Waste */}
               <button
                 onClick={() => router.push('/staff/waste')}
-                className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200/80 rounded-2xl shadow-xs hover:border-gray-300 hover:shadow-sm active:scale-98 transition-all group"
+                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
               >
                 <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-500 mb-2 group-hover:scale-105 transition-transform">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -270,7 +270,7 @@ export default function ManagerDashboardClient({ data }: Props) {
                   const el = document.getElementById('restock-form-container')
                   el?.scrollIntoView({ behavior: 'smooth' })
                 }}
-                className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200/80 rounded-2xl shadow-xs hover:border-gray-300 hover:shadow-sm active:scale-98 transition-all group"
+                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
               >
                 <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-[#e85d04] mb-2 group-hover:scale-105 transition-transform">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -284,7 +284,7 @@ export default function ManagerDashboardClient({ data }: Props) {
               {/* Perform Cycle Count */}
               <button
                 onClick={() => router.push('/staff/cycle-count')}
-                className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200/80 rounded-2xl shadow-xs hover:border-gray-300 hover:shadow-sm active:scale-98 transition-all group"
+                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
               >
                 <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-[#2e7d32] mb-2 group-hover:scale-105 transition-transform">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -298,7 +298,7 @@ export default function ManagerDashboardClient({ data }: Props) {
           </div>
 
           {/* Section: Cycle Count (Figma exact match) */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 space-y-4">
+          <div className="surface-card rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">Cycle Count Status</h3>
               <Link
@@ -331,7 +331,7 @@ export default function ManagerDashboardClient({ data }: Props) {
         {/* Right Column: Manual Restock Form & Manager Quick Navigation (5 cols on lg:) */}
         <div id="restock-form-container" className="lg:col-span-5 space-y-6">
           {/* Manual Restock Form Card (Figma exact match) */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 sm:p-6 space-y-5">
+          <div className="surface-card rounded-2xl p-5 sm:p-6 space-y-5">
             <div>
               <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">Manual Restock</h2>
               <p className="text-xs text-gray-500 mt-0.5">Log a delivery as it arrives.</p>
@@ -412,7 +412,7 @@ export default function ManagerDashboardClient({ data }: Props) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-[#e85d04] hover:bg-[#d45203] text-white font-bold py-3.5 rounded-xl text-sm shadow-sm active:scale-98 transition-all disabled:opacity-50"
+                className="w-full btn-tactile-primary text-white font-bold py-3.5 rounded-xl text-sm disabled:opacity-50"
               >
                 {isSubmitting ? 'Submitting Restock...' : 'Submit Restock'}
               </button>
@@ -420,9 +420,9 @@ export default function ManagerDashboardClient({ data }: Props) {
           </div>
 
           {/* Manager Action Shortcuts */}
-          <div className="bg-linear-to-br from-orange-50/60 to-amber-50/40 border border-orange-200/60 rounded-2xl p-5 space-y-3">
+          <div className="surface-accent-warm rounded-2xl p-5 space-y-3">
             <h4 className="text-sm font-bold text-orange-950 flex items-center gap-2">
-              <span>⚡</span> Manager Tools
+              <span>⚡</span> Quick Shortcuts
             </h4>
             <p className="text-xs text-orange-900/80 leading-relaxed">
               Quickly manage Clover POS product recipe mappings, adjust low-stock thresholds, or run variance audits.
@@ -446,7 +446,7 @@ export default function ManagerDashboardClient({ data }: Props) {
       </div>
 
       {/* SECTION: Compacted Recent Activity & Audit Logs (Navigates to /manager/reports on click) */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 sm:p-6 space-y-4">
+      <div className="surface-card rounded-2xl p-5 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
           <div
             onClick={() => router.push('/manager/reports')}
