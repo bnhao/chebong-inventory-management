@@ -1,6 +1,6 @@
 # 🥣 CB Inventory – Smart Inventory & Operations Suite
 
-> **Progressive Web App (PWA)** built for **Chè Bông Dessert & Snacks** to manage raw ingredients, FIFO batch tracking, Clover POS recipe bill-of-materials (BOM), physical cycle-count audits, and waste logging with real-time Supabase PostgreSQL synchronization.
+> **Progressive Web App (PWA)** developed by **Cleverstock** for **Chè Bông Dessert & Snacks** to manage raw ingredients, FIFO batch tracking, Clover POS recipe bill-of-materials (BOM), physical cycle-count audits, and waste logging with real-time Supabase PostgreSQL synchronization.
 
 ---
 
@@ -170,5 +170,5 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 📄 License
-Private & Proprietary — Developed for **Chè Bông Dessert & Snacks**. © Nguyen Hao Bui 2026.
+## 📄 License & Credits
+Private & Proprietary — Developed by **Cleverstock** for **Chè Bông Dessert & Snacks**. © Cleverstock 2026.

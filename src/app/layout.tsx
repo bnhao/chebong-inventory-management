@@ -5,8 +5,10 @@ import RealtimeSync from '@/components/RealtimeSync'
 
 export const metadata: Metadata = {
   title: 'CB Inventory',
-  description: 'Smart Inventory & Operations Management System for Chè Bông Dessert & Snacks',
+  description: 'Smart Inventory & Operations Management System for Chè Bông Dessert & Snacks — Developed by Cleverstock',
   applicationName: 'CB Inventory',
+  authors: [{ name: 'Cleverstock' }],
+  creator: 'Cleverstock',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
