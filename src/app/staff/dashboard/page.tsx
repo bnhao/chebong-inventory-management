@@ -1,6 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { AlertItem, Ingredient } from '@/lib/types'
 import { fetchAllIngredientsWithBatches, computeAlerts } from '@/lib/data'
+import {
+  buildDailyCycleCountSummary,
+  DailyCycleCountSummary,
+  TodayCycleCountTx,
+} from '@/lib/cycle-count'
+import {
+  getStoreDateString,
+  getStoreDayBoundsUtc,
+  getStoreHeaderContext,
+  StoreHeaderContext,
+} from '@/lib/timezone'
 import DashboardClient from './DashboardClient'
 
 export const dynamic = 'force-dynamic'
@@ -8,53 +19,37 @@ export const dynamic = 'force-dynamic'
 export interface StaffDashboardData {
   alerts: AlertItem[]
   ingredients: Ingredient[]
-  cycleCountStatus: Array<{
-    name: string
-    unit: string
-    status: 'counted' | 'pending'
-    countedQty?: number
-  }>
+  cycleCountSummary: DailyCycleCountSummary
+  headerContext: StoreHeaderContext
 }
 
 async function getStaffDashboardData(): Promise<StaffDashboardData> {
   const supabase = await createClient()
+  const now = new Date()
+  const headerContext = getStoreHeaderContext(now)
+  const todayStr = getStoreDateString(now)
+  const { startIso, endIso } = getStoreDayBoundsUtc(todayStr)
 
-  // 1. Fetch all ingredients with batches and calculate real stock
-  const ingredientsWithBatches = await fetchAllIngredientsWithBatches()
+  const [ingredientsWithBatches, { data: todayTxs }] = await Promise.all([
+    fetchAllIngredientsWithBatches(),
+    supabase
+      .from('inventory_transactions')
+      .select('ingredient_id, new_stock, quantity_change, created_at')
+      .eq('transaction_type', 'CYCLE_COUNT')
+      .gte('created_at', startIso)
+      .lt('created_at', endIso)
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ])
 
-  // 2. Compute alerts (low stock & expiration warnings)
-  const alerts = computeAlerts(ingredientsWithBatches)
-
-  // 3. Fetch recent cycle count transactions
-  const { data: recentTxs } = await supabase
-    .from('inventory_transactions')
-    .select('ingredient_id, transaction_type, new_stock, quantity_change, created_at')
-    .eq('transaction_type', 'CYCLE_COUNT')
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  type TxRow = { ingredient_id: string; new_stock?: number; quantity_change?: number }
-  const cycleTxs = (recentTxs || []) as unknown as TxRow[]
-
-  const cycleCountStatus = ingredientsWithBatches.slice(0, 4).map((ing) => {
-    const counted = cycleTxs.find((tx) => tx.ingredient_id === ing.id)
-    if (counted) {
-      const qty = counted.new_stock !== undefined && counted.new_stock !== null
-        ? Number(counted.new_stock)
-        : Number(counted.quantity_change || 0)
-      return {
-        name: ing.name,
-        unit: ing.unit,
-        status: 'counted' as const,
-        countedQty: qty,
-      }
-    }
-    return {
-      name: ing.name,
-      unit: ing.unit,
-      status: 'pending' as const,
-    }
-  })
+  const alerts = computeAlerts(ingredientsWithBatches, now)
+  const cycleCountSummary = buildDailyCycleCountSummary(
+    ingredientsWithBatches,
+    alerts,
+    (todayTxs || []) as TodayCycleCountTx[],
+    todayStr,
+    5
+  )
 
   return {
     alerts,
@@ -69,7 +64,8 @@ async function getStaffDashboardData(): Promise<StaffDashboardData> {
       description: i.description,
       created_at: i.created_at,
     })),
-    cycleCountStatus,
+    cycleCountSummary,
+    headerContext,
   }
 }
 

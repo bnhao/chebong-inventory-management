@@ -42,6 +42,7 @@ export interface InventoryTransaction {
 
 export interface AlertItem {
   id: string
+  ingredientId?: string
   ingredientName: string
   type: 'low_stock' | 'expiring_soon' | 'spoiled'
   message: string

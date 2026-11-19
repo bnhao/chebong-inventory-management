@@ -127,13 +127,14 @@ flowchart LR
 ### Step 1: Provision the Database (Supabase)
 1. Create a project at [supabase.com](https://supabase.com).
 2. Open the **SQL Editor** in your Supabase dashboard.
-3. Open [`supabase/schema.sql`](file:///Users/haonguyen/Downloads/chebong-inventory-management/supabase/schema.sql) from this repository, copy its contents, paste them into the SQL editor, and click **Run**.
+3. Open [`supabase/schema.sql`](file:///Users/haonguyen/Downloads/chebong-inventory-management/supabase/schema.sql) from this repository, copy its contents, paste them into the SQL editor, and click **Run** (for existing databases, run [`supabase/migrations/20261119_data_integrity_and_fifo_sync.sql`](file:///Users/haonguyen/Downloads/chebong-inventory-management/supabase/migrations/20261119_data_integrity_and_fifo_sync.sql)).
 4. This script sets up:
    - `ingredients` table with real-time stock balances
    - `inventory_batches` table for FIFO tracking
    - `inventory_transactions` audit log
    - `clover_items` & `recipe_ingredients` for POS recipe mapping
-   - `handle_inventory_transaction()` PostgreSQL trigger for automatic stock balance calculations
+   - `handle_inventory_transaction()` PostgreSQL trigger for automatic stock balance & FIFO batch calculations
+   - Atomic RPCs (`commit_eod_sales`, `submit_cycle_count_batch`, `submit_restock_batch`)
    - Row Level Security (RLS) policies
 
 ### Step 2: Configure Environment Variables
@@ -142,6 +143,12 @@ In your local environment ([`.env.local`](file:///Users/haonguyen/Downloads/cheb
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Optional: enables scanning printed/screenshot Clover EOD sales reports with Gemini Vision
+GEMINI_API_KEY=your-gemini-api-key
+
+# Optional: store IANA timezone for daily cycle-count resets, EOD dates, and report filters
+NEXT_PUBLIC_STORE_TIMEZONE=America/Edmonton
 ```
 
 ### Step 3: Five Manager Best Practices for Maximum Efficiency

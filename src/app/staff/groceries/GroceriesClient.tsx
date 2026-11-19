@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import StaffDesktopNav from '@/components/StaffDesktopNav'
 import ManagerNav from '@/components/ManagerNav'
@@ -28,6 +28,7 @@ export interface GroceryItem {
 interface Props {
   ingredients: GroceryItem[]
   isManagerView?: boolean
+  dateLabel?: string
 }
 
 const COVER_OPTIONS = [
@@ -74,7 +75,7 @@ function computeSmartOrderQty(item: GroceryItem, coverDays: number, demandKey: s
     : Math.max(1, Math.ceil(dailyRate * 2 * multiplier))
 }
 
-export default function GroceriesClient({ ingredients, isManagerView = false }: Props) {
+export default function GroceriesClient({ ingredients, isManagerView = false, dateLabel }: Props) {
   const router = useRouter()
 
   // AI Demand Planner state
@@ -93,6 +94,21 @@ export default function GroceriesClient({ ingredients, isManagerView = false }: 
     }
     return init
   })
+
+  // Merge new ingredients when server data refreshes without overwriting user-adjusted quantities
+  useEffect(() => {
+    setQuantities((prev) => {
+      const next = { ...prev }
+      let changed = false
+      for (const item of ingredients) {
+        if (next[item.id] === undefined) {
+          next[item.id] = computeSmartOrderQty(item, coverDays, demand)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [ingredients, coverDays, demand])
 
   // Recalculate quantities when user changes coverDays / demand or clicks Regenerate
   function applyAiSuggestions(nextCoverDays: number, nextDemand: string) {
@@ -406,7 +422,7 @@ export default function GroceriesClient({ ingredients, isManagerView = false }: 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · Grocery Shopping Run
+            {dateLabel || 'Today'} · Grocery Shopping Run
           </p>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
             {isManagerView ? 'Manager Grocery Buying Checklist' : 'Staff Shopping Checklist'}

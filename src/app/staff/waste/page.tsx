@@ -45,6 +45,7 @@ async function getWastePageData(): Promise<{
         unit
       )
     `)
+    .eq('status', 'ACTIVE')
     .gt('quantity_remaining', 0)
     .order('expiration_date', { ascending: true })
 

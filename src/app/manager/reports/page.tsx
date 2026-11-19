@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getStoreRangeBoundsUtc, StoreRangeBounds } from '@/lib/timezone'
 import ReportsClient from './ReportsClient'
 
 export const dynamic = 'force-dynamic'
@@ -21,35 +22,11 @@ export interface AuditReportTransaction {
   created_at: string
 }
 
-async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
+const PAGE_SIZE = 1000
+const MAX_ROWS = 10000
+
+async function getAuditReportsData(bounds: StoreRangeBounds): Promise<AuditReportTransaction[]> {
   const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from('inventory_transactions')
-    .select(`
-      id,
-      ingredient_id,
-      transaction_type,
-      quantity_change,
-      new_stock,
-      previous_stock,
-      reason,
-      reference_id,
-      performed_by,
-      created_at,
-      ingredient:ingredients (
-        name,
-        unit,
-        cost_per_unit
-      )
-    `)
-    .order('created_at', { ascending: false })
-    .limit(200)
-
-  if (error || !data) {
-    console.error('Error fetching audit reports data:', error)
-    return []
-  }
 
   type IngData = { name: string; unit: string; cost_per_unit: number | null }
   type TxRow = {
@@ -66,9 +43,52 @@ async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
     ingredient: IngData[] | IngData | null
   }
 
-  const txList = (data || []) as unknown as TxRow[]
+  const allRows: TxRow[] = []
 
-  return txList.map((tx) => {
+  for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+    let query = supabase
+      .from('inventory_transactions')
+      .select(`
+        id,
+        ingredient_id,
+        transaction_type,
+        quantity_change,
+        new_stock,
+        previous_stock,
+        reason,
+        reference_id,
+        performed_by,
+        created_at,
+        ingredient:ingredients (
+          name,
+          unit,
+          cost_per_unit
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (bounds.startIso) {
+      query = query.gte('created_at', bounds.startIso)
+    }
+    if (bounds.endIso) {
+      query = query.lt('created_at', bounds.endIso)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      console.error('Error fetching audit reports data:', error)
+      break
+    }
+
+    const batch = (data || []) as unknown as TxRow[]
+    allRows.push(...batch)
+    if (batch.length < PAGE_SIZE) {
+      break
+    }
+  }
+
+  return allRows.map((tx) => {
     const ing = Array.isArray(tx.ingredient) ? (tx.ingredient[0] as IngData) : (tx.ingredient as IngData)
     const name = ing?.name || 'Unknown'
     const unit = ing?.unit || 'units'
@@ -80,20 +100,22 @@ async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
     if (tx.transaction_type === 'CYCLE_COUNT') {
       const actual = tx.new_stock !== null && tx.new_stock !== undefined ? Number(tx.new_stock) : recordedQty
       const prev = tx.previous_stock !== null && tx.previous_stock !== undefined ? Number(tx.previous_stock) : actual
-      discrepancy = actual - prev
+      discrepancy = Math.round((actual - prev) * 100) / 100
       recordedQty = actual
     }
 
-    // Financial impact calculation
+    // Consistent inventory value change sign:
+    // + for RESTOCK and positive cycle-count surplus,
+    // - for SALE (COGS consumption), WASTE, and negative cycle-count shortage.
     let financialImpact = 0
     if (tx.transaction_type === 'CYCLE_COUNT' && discrepancy !== null) {
       financialImpact = discrepancy * unitCost
     } else if (tx.transaction_type === 'WASTE') {
-      financialImpact = -(recordedQty * unitCost)
+      financialImpact = -(Math.abs(recordedQty) * unitCost)
     } else if (tx.transaction_type === 'RESTOCK') {
-      financialImpact = recordedQty * unitCost
+      financialImpact = Math.abs(recordedQty) * unitCost
     } else if (tx.transaction_type === 'SALE') {
-      financialImpact = recordedQty * unitCost
+      financialImpact = -(Math.abs(recordedQty) * unitCost)
     }
 
     return {
@@ -116,7 +138,21 @@ async function getAuditReportsData(): Promise<AuditReportTransaction[]> {
   })
 }
 
-export default async function ReportsPage() {
-  const transactions = await getAuditReportsData()
-  return <ReportsClient initialTransactions={transactions} />
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>
+}) {
+  const params = await searchParams
+  const bounds = getStoreRangeBoundsUtc(params?.range, params?.from, params?.to)
+  const transactions = await getAuditReportsData(bounds)
+
+  return (
+    <ReportsClient
+      initialTransactions={transactions}
+      rangeKey={bounds.rangeKey}
+      fromDate={bounds.fromDate}
+      toDate={bounds.toDate}
+    />
+  )
 }

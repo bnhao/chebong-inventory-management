@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { submitRestockAction } from '@/app/actions/inventory'
+import { getStoreTimezone } from '@/lib/timezone'
 import { ManagerDashboardData } from './page'
 
 interface Props {
@@ -132,10 +133,12 @@ export default function ManagerDashboardClient({ data }: Props) {
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Counts Done Today</p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl sm:text-3xl font-extrabold text-[#2e7d32]">
-              {data.cycleCountStatus.filter((c) => c.status === 'counted').length} / {data.cycleCountStatus.length}
+              {data.cycleCountSummary.countedCount} / {data.cycleCountSummary.totalCount}
             </span>
           </div>
-          <p className="text-xs text-green-700 font-medium mt-1.5">Cycle counts logged today</p>
+          <p className="text-xs text-green-700 font-medium mt-1.5">
+            {data.cycleCountSummary.progressPct}% counted today
+          </p>
         </div>
       </div>
 
@@ -297,28 +300,57 @@ export default function ManagerDashboardClient({ data }: Props) {
             </div>
           </div>
 
-          {/* Section: Cycle Count (Figma exact match) */}
+          {/* Section: Cycle Count (Daily Reset & Risk-Prioritized) */}
           <div className="surface-card rounded-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Cycle Count Status</h3>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-gray-900">Today&apos;s Cycle Count</h3>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#2e7d32] border border-emerald-200/70">
+                  {data.cycleCountSummary.countedCount} / {data.cycleCountSummary.totalCount}
+                </span>
+              </div>
               <Link
                 href="/manager/reports"
-                className="text-xs font-semibold text-[#e85d04] hover:underline"
+                className="text-xs font-semibold text-[#e85d04] hover:underline shrink-0"
               >
                 Audit Logs →
               </Link>
             </div>
 
+            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-[#2e7d32] h-2 rounded-full transition-all duration-300"
+                style={{ width: `${data.cycleCountSummary.progressPct}%` }}
+              />
+            </div>
+
             <div className="divide-y divide-gray-100">
-              {data.cycleCountStatus.map((item, idx) => (
-                <div key={idx} className="py-3 flex items-center justify-between first:pt-0 last:pb-0">
-                  <span className="text-sm font-semibold text-gray-800">{item.name}</span>
+              {data.cycleCountSummary.items.map((item) => (
+                <div key={item.ingredientId} className="py-3 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm font-semibold text-gray-800 truncate">{item.name}</span>
+                    {item.status === 'pending' && item.priorityReason === 'critical' && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 shrink-0">
+                        Critical
+                      </span>
+                    )}
+                    {item.status === 'pending' && item.priorityReason === 'warning' && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                        At Risk
+                      </span>
+                    )}
+                    {item.status === 'pending' && item.priorityReason === 'high_value' && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                        High Value
+                      </span>
+                    )}
+                  </div>
                   {item.status === 'counted' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-[#2e7d32] border border-green-200/60">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-[#2e7d32] border border-green-200/60 shrink-0">
                       Counted · {item.countedQty} {item.unit}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 shrink-0">
                       Pending
                     </span>
                   )}
@@ -405,7 +437,11 @@ export default function ManagerDashboardClient({ data }: Props) {
                   onChange={(e) => setExpirationDate(e.target.value)}
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs"
                 />
-                <p className="text-[11px] text-gray-400">Used for spoiled time limit and automated alerts.</p>
+                <p className="text-[11px] text-gray-400">
+                  {selectedIngredient
+                    ? `Defaults to +${selectedIngredient.spoiled_time_limit_days} days (${selectedIngredient.name} shelf life) if left blank.`
+                    : 'Used for spoiled time limit and automated alerts.'}
+                </p>
               </div>
 
               {/* Submit Button */}
@@ -564,11 +600,14 @@ export default function ManagerDashboardClient({ data }: Props) {
           <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
             {filteredLogs.slice(0, 4).map((log) => {
               const date = new Date(log.created_at)
+              const storeTz = getStoreTimezone()
               const formattedDate = date.toLocaleDateString('en-US', {
+                timeZone: storeTz,
                 month: 'short',
                 day: 'numeric',
               })
               const formattedTime = date.toLocaleTimeString('en-US', {
+                timeZone: storeTz,
                 hour: '2-digit',
                 minute: '2-digit',
               })

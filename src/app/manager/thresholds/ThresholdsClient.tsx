@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createIngredientAction } from '@/app/actions/ingredients'
 import { updateIngredientAction, UpdateIngredientInput } from '@/app/actions/inventory'
@@ -23,6 +23,10 @@ export default function ThresholdsClient({ initialIngredients }: Props) {
   const router = useRouter()
 
   const [ingredients, setIngredients] = useState<IngredientThresholdRow[]>(initialIngredients)
+
+  useEffect(() => {
+    setIngredients(initialIngredients)
+  }, [initialIngredients])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'low' | 'normal'>('all')
 
@@ -60,7 +64,7 @@ export default function ThresholdsClient({ initialIngredients }: Props) {
     setEditSpoiledDays(item.spoiled_time_limit_days.toString())
     setEditDailyUsage(item.daily_usage_rate.toString())
     setEditCost((item.cost_per_unit || 0).toString())
-    setEditDescription('')
+    setEditDescription(item.description || '')
     setUpdateError('')
   }
 
@@ -106,6 +110,7 @@ export default function ThresholdsClient({ initialIngredients }: Props) {
               spoiled_time_limit_days: payload.spoiled_time_limit_days,
               daily_usage_rate: payload.daily_usage_rate,
               cost_per_unit: payload.cost_per_unit,
+              description: payload.description,
               totalValue: item.currentStock * (payload.cost_per_unit || 0),
             }
           : item

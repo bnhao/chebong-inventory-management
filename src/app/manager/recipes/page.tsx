@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { fetchAllIngredientsWithBatches } from '@/lib/data'
+import { getStoreDateString } from '@/lib/timezone'
 import RecipesClient from './RecipesClient'
 import { CloverItem } from '@/lib/types'
 
@@ -63,11 +64,15 @@ async function getRecipesData() {
 }
 
 export default async function RecipesPage() {
-  const { cloverItems, ingredientsWithStock } = await getRecipesData()
+  const [{ cloverItems, ingredientsWithStock }, defaultBusinessDate] = await Promise.all([
+    getRecipesData(),
+    Promise.resolve(getStoreDateString()),
+  ])
   return (
     <RecipesClient
       initialCloverItems={cloverItems}
       ingredients={ingredientsWithStock}
+      defaultBusinessDate={defaultBusinessDate}
     />
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import StaffDesktopNav from '@/components/StaffDesktopNav'
 import { submitCycleCountAction } from '@/app/actions/inventory'
@@ -72,6 +72,16 @@ export default function CycleCountForm({ ingredients }: Props) {
   const [counts, setCounts] = useState<CountEntry[]>(
     ingredients.map((ing) => ({ ingredientId: ing.id, actualCount: '' }))
   )
+
+  useEffect(() => {
+    setCounts((prev) => {
+      const existing = new Map(prev.map((c) => [c.ingredientId, c.actualCount]))
+      return ingredients.map((ing) => ({
+        ingredientId: ing.id,
+        actualCount: existing.get(ing.id) ?? '',
+      }))
+    })
+  }, [ingredients])
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
