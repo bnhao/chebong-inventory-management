@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import StaffDesktopNav from '@/components/StaffDesktopNav'
 import { submitRestockAction } from '@/app/actions/inventory'
@@ -46,6 +46,10 @@ export default function RestockForm({ ingredients, recentDeliveries }: Props) {
   const router = useRouter()
 
   const [ingredientList, setIngredientList] = useState<Ingredient[]>(ingredients)
+
+  useEffect(() => {
+    setIngredientList(ingredients)
+  }, [ingredients])
   const [ingredientId, setIngredientId] = useState('')
   const [quantity, setQuantity] = useState('')
   const [expirationDate, setExpirationDate] = useState('')
@@ -328,7 +332,11 @@ export default function RestockForm({ ingredients, recentDeliveries }: Props) {
                   onChange={(e) => setExpirationDate(e.target.value)}
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs"
                 />
-                <p className="text-[11px] text-gray-400">Optional — defaults to 7 days if left blank</p>
+                <p className="text-[11px] text-gray-400">
+                  {selectedIngredient
+                    ? `Optional — defaults to +${selectedIngredient.spoiled_time_limit_days} days (${selectedIngredient.name} shelf life) if left blank`
+                    : 'Optional — defaults to ingredient shelf life if left blank'}
+                </p>
               </div>
 
               {/* Submit */}

@@ -32,6 +32,8 @@ export default function RealtimeSync() {
             ? 'Inventory activity synced'
             : tableName === 'inventory_batches'
             ? 'New batch synced'
+            : tableName === 'recipe_ingredients' || tableName === 'clover_items'
+            ? 'Recipes synced'
             : 'Stock updated'
 
         setLastSyncMsg(`🟢 Live: ${label}`)
@@ -65,6 +67,11 @@ export default function RealtimeSync() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'clover_items' },
         () => triggerRefresh('clover_items')
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'recipe_ingredients' },
+        () => triggerRefresh('recipe_ingredients')
       )
       .subscribe()
 

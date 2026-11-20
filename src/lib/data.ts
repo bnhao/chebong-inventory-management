@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getStoreTimezone } from '@/lib/timezone'
 import { AlertItem, Ingredient } from '@/lib/types'
 
 export interface IngredientWithBatches extends Ingredient {
@@ -33,6 +34,7 @@ export async function fetchAllIngredientsWithBatches(): Promise<IngredientWithBa
     const { data: rawBatches } = await supabase
       .from('inventory_batches')
       .select('*')
+      .eq('status', 'ACTIVE')
       .gt('quantity_remaining', 0)
       .order('expiration_date', { ascending: true })
 
@@ -78,8 +80,12 @@ export async function fetchAllIngredientsWithBatches(): Promise<IngredientWithBa
         }))
 
       // current_stock is maintained by DB trigger, or fallback to sum of batches
-      const stock = Number(ing.current_stock) >= 0
-        ? Number(ing.current_stock)
+      const parsedStock =
+        ing.current_stock !== null && ing.current_stock !== undefined
+          ? Number(ing.current_stock)
+          : NaN
+      const stock = Number.isFinite(parsedStock)
+        ? parsedStock
         : ingredientBatches.reduce((sum: number, b) => sum + b.quantityRemaining, 0)
 
       return {
@@ -103,9 +109,18 @@ export async function fetchAllIngredientsWithBatches(): Promise<IngredientWithBa
   }
 }
 
-export function computeAlerts(ingredients: IngredientWithBatches[]): AlertItem[] {
+export function computeAlerts(
+  ingredients: IngredientWithBatches[],
+  now: Date = new Date(),
+  timeZone: string = getStoreTimezone()
+): AlertItem[] {
   const alerts: AlertItem[] = []
-  const now = new Date()
+  const dateFmt = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 
   for (const ing of ingredients) {
     const minThreshold = ing.low_stock_threshold || 0
@@ -115,6 +130,7 @@ export function computeAlerts(ingredients: IngredientWithBatches[]): AlertItem[]
     if (currentStock <= minThreshold) {
       alerts.push({
         id: `low-${ing.id}`,
+        ingredientId: ing.id,
         ingredientName: ing.name,
         type: 'low_stock',
         message: `${ing.name} is low`,
@@ -137,10 +153,11 @@ export function computeAlerts(ingredients: IngredientWithBatches[]): AlertItem[]
       if (diffHours < 0) {
         alerts.push({
           id: `spoiled-${batch.id}`,
+          ingredientId: ing.id,
           ingredientName: ing.name,
           type: 'spoiled',
           message: `${ing.name} is spoiled — discard`,
-          subMessage: `Batch passed expiration limit (${expDate.toLocaleDateString()})`,
+          subMessage: `Batch passed expiration limit (${dateFmt.format(expDate)})`,
           severity: 'critical',
           daysLeft,
           unit: ing.unit,
@@ -148,6 +165,7 @@ export function computeAlerts(ingredients: IngredientWithBatches[]): AlertItem[]
       } else if (diffHours <= 24) {
         alerts.push({
           id: `exp24-${batch.id}`,
+          ingredientId: ing.id,
           ingredientName: ing.name,
           type: 'expiring_soon',
           message: `${batch.quantityRemaining} ${ing.unit} of ${ing.name} expiring in 24 hrs`,
@@ -159,6 +177,7 @@ export function computeAlerts(ingredients: IngredientWithBatches[]): AlertItem[]
       } else if (daysLeft <= ing.spoiled_time_limit_days && daysLeft <= 3) {
         alerts.push({
           id: `exp-${batch.id}`,
+          ingredientId: ing.id,
           ingredientName: ing.name,
           type: 'expiring_soon',
           message: `${ing.name} expiring soon`,

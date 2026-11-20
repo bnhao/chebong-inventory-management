@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { AlertItem, Ingredient } from '@/lib/types'
 import { fetchAllIngredientsWithBatches, computeAlerts } from '@/lib/data'
+import {
+  buildDailyCycleCountSummary,
+  DailyCycleCountSummary,
+  TodayCycleCountTx,
+} from '@/lib/cycle-count'
+import { getStoreDateString, getStoreDayBoundsUtc } from '@/lib/timezone'
 import ManagerDashboardClient from './ManagerDashboardClient'
 
 export const dynamic = 'force-dynamic'
@@ -29,12 +35,7 @@ export interface ManagerDashboardData {
   lowStockCount: number
   expiringCount: number
   spoiledCount: number
-  cycleCountStatus: Array<{
-    name: string
-    unit: string
-    status: 'counted' | 'pending'
-    countedQty?: number
-  }>
+  cycleCountSummary: DailyCycleCountSummary
   recentAudits: Array<{
     id: string
     ingredientName: string
@@ -47,18 +48,44 @@ export interface ManagerDashboardData {
 
 async function getManagerDashboardData(): Promise<ManagerDashboardData> {
   const supabase = await createClient()
+  const now = new Date()
+  const todayStr = getStoreDateString(now)
+  const { startIso, endIso } = getStoreDayBoundsUtc(todayStr)
 
-  // 1. Fetch ingredients with batches and real stock
-  const ingredientsWithBatches = await fetchAllIngredientsWithBatches()
+  const [ingredientsWithBatches, { data: todayCycleTxs }, { data: recentTxs }] =
+    await Promise.all([
+      fetchAllIngredientsWithBatches(),
+      supabase
+        .from('inventory_transactions')
+        .select('ingredient_id, new_stock, quantity_change, created_at')
+        .eq('transaction_type', 'CYCLE_COUNT')
+        .gte('created_at', startIso)
+        .lt('created_at', endIso)
+        .order('created_at', { ascending: false })
+        .limit(200),
+      supabase
+        .from('inventory_transactions')
+        .select(`
+          id,
+          ingredient_id,
+          transaction_type,
+          new_stock,
+          quantity_change,
+          previous_stock,
+          reason,
+          reference_id,
+          performed_by,
+          created_at,
+          ingredient:ingredients ( name, unit, cost_per_unit )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(80),
+    ])
 
-  // 2. Compute alerts (low stock & expiring)
-  const alerts = computeAlerts(ingredientsWithBatches)
+  const alerts = computeAlerts(ingredientsWithBatches, now)
 
-  // 3. Compute stats
   let totalValuation = 0
   let lowStockCount = 0
-  let expiringCount = 0
-  let spoiledCount = 0
 
   for (const ing of ingredientsWithBatches) {
     totalValuation += (ing.currentStock || 0) * (ing.cost_per_unit || 0)
@@ -67,27 +94,16 @@ async function getManagerDashboardData(): Promise<ManagerDashboardData> {
     }
   }
 
-  expiringCount = alerts.filter((a) => a.type === 'expiring_soon').length
-  spoiledCount = alerts.filter((a) => a.type === 'spoiled').length
+  const expiringCount = alerts.filter((a) => a.type === 'expiring_soon').length
+  const spoiledCount = alerts.filter((a) => a.type === 'spoiled').length
 
-  // 4. Fetch recent transactions for audit, cycle count, and manager log stream
-  const { data: recentTxs } = await supabase
-    .from('inventory_transactions')
-    .select(`
-      id,
-      ingredient_id,
-      transaction_type,
-      new_stock,
-      quantity_change,
-      previous_stock,
-      reason,
-      reference_id,
-      performed_by,
-      created_at,
-      ingredient:ingredients ( name, unit, cost_per_unit )
-    `)
-    .order('created_at', { ascending: false })
-    .limit(80)
+  const cycleCountSummary = buildDailyCycleCountSummary(
+    ingredientsWithBatches,
+    alerts,
+    (todayCycleTxs || []) as TodayCycleCountTx[],
+    todayStr,
+    5
+  )
 
   type TxWithIng = {
     id: string
@@ -100,36 +116,25 @@ async function getManagerDashboardData(): Promise<ManagerDashboardData> {
     reference_id: string | null
     performed_by: string | null
     created_at: string
-    ingredient: { name: string; unit: string; cost_per_unit: number | null }[] | { name: string; unit: string; cost_per_unit: number | null } | null
+    ingredient:
+      | { name: string; unit: string; cost_per_unit: number | null }[]
+      | { name: string; unit: string; cost_per_unit: number | null }
+      | null
   }
 
   const txList = (recentTxs || []) as unknown as TxWithIng[]
   const cycleCountTxs = txList.filter((t) => t.transaction_type === 'CYCLE_COUNT')
 
-  const cycleCountStatus = ingredientsWithBatches.slice(0, 5).map((ing) => {
-    const countedTx = cycleCountTxs.find((tx) => tx.ingredient_id === ing.id)
-    if (countedTx) {
-      const qty = countedTx.new_stock !== null && countedTx.new_stock !== undefined
-        ? Number(countedTx.new_stock)
-        : Number(countedTx.quantity_change || 0)
-      return {
-        name: ing.name,
-        unit: ing.unit,
-        status: 'counted' as const,
-        countedQty: qty,
-      }
-    }
-    return {
-      name: ing.name,
-      unit: ing.unit,
-      status: 'pending' as const,
-    }
-  })
-
   const recentAudits = cycleCountTxs.slice(0, 6).map((tx) => {
     const ingData = Array.isArray(tx.ingredient) ? tx.ingredient[0] : tx.ingredient
-    const actual = tx.new_stock !== null && tx.new_stock !== undefined ? Number(tx.new_stock) : Number(tx.quantity_change)
-    const prev = tx.previous_stock !== null && tx.previous_stock !== undefined ? Number(tx.previous_stock) : actual
+    const actual =
+      tx.new_stock !== null && tx.new_stock !== undefined
+        ? Number(tx.new_stock)
+        : Number(tx.quantity_change)
+    const prev =
+      tx.previous_stock !== null && tx.previous_stock !== undefined
+        ? Number(tx.previous_stock)
+        : actual
     const discrepancy = actual - prev
     return {
       id: tx.id,
@@ -177,7 +182,7 @@ async function getManagerDashboardData(): Promise<ManagerDashboardData> {
     lowStockCount,
     expiringCount,
     spoiledCount,
-    cycleCountStatus,
+    cycleCountSummary,
     recentAudits,
     recentLogs,
   }
