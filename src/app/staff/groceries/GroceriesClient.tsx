@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import StaffDesktopNav from '@/components/StaffDesktopNav'
 import ManagerNav from '@/components/ManagerNav'
@@ -46,10 +46,10 @@ const DEMAND_MULTIPLIERS: Record<string, number> = {
 }
 
 const DEMAND_LABELS: Record<string, string> = {
-  normal: 'Normal week (1.0x)',
+  normal: 'Normal week',
   busy: 'Busy week (+20%)',
   slow: 'Slow week (−20%)',
-  peak: 'Peak season (+50%)',
+  peak: 'Peak week (+50%)',
 }
 
 const DEPARTMENTS = [
@@ -60,6 +60,13 @@ const DEPARTMENTS = [
   'Dry Goods & Packaging',
   'Hand-Cooked Jellies',
 ] as const
+
+const STORE_PRESETS = ['Costco & Asian Market', 'Costco', 'Asian Market', 'In-House Kitchen Prep']
+
+function supportsHalfStep(unit: string): boolean {
+  const u = unit.trim().toLowerCase()
+  return u === 'kg' || u === 'l' || u === 'g' || u === 'ml' || u === 'lb' || u === 'oz'
+}
 
 function computeSmartOrderQty(item: GroceryItem, coverDays: number, demandKey: string): number {
   const multiplier = DEMAND_MULTIPLIERS[demandKey] ?? 1.0
@@ -78,7 +85,8 @@ function computeSmartOrderQty(item: GroceryItem, coverDays: number, demandKey: s
 export default function GroceriesClient({ ingredients, isManagerView = false, dateLabel }: Props) {
   const router = useRouter()
 
-  // AI Demand Planner state
+  // Plan Settings (collapsed by default so checklist is first)
+  const [showPlanSettings, setShowPlanSettings] = useState(false)
   const [coverDays, setCoverDays] = useState<number>(7)
   const [demand, setDemand] = useState<string>('normal')
   const [generating, setGenerating] = useState<boolean>(false)
@@ -86,7 +94,15 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
   // Checklist state: Set of checked ingredient IDs
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
 
-  // Custom adjusted quantities per ingredient (initialized with 7-day normal AI suggestion)
+  // Recommended baseline for current coverDays/demand + custom adjusted quantities
+  const recommendedById = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const item of ingredients) {
+      map[item.id] = computeSmartOrderQty(item, coverDays, demand)
+    }
+    return map
+  }, [ingredients, coverDays, demand])
+
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
     for (const item of ingredients) {
@@ -95,7 +111,6 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
     return init
   })
 
-  // Merge new ingredients when server data refreshes without overwriting user-adjusted quantities
   useEffect(() => {
     setQuantities((prev) => {
       const next = { ...prev }
@@ -110,8 +125,7 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
     })
   }, [ingredients, coverDays, demand])
 
-  // Recalculate quantities when user changes coverDays / demand or clicks Regenerate
-  function applyAiSuggestions(nextCoverDays: number, nextDemand: string) {
+  function applySuggestions(nextCoverDays: number, nextDemand: string) {
     const updated: Record<string, number> = {}
     for (const item of ingredients) {
       updated[item.id] = computeSmartOrderQty(item, nextCoverDays, nextDemand)
@@ -119,148 +133,66 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
     setQuantities(updated)
   }
 
-  function handleRegenerateAi() {
+  function handleRecalculate() {
     setGenerating(true)
     setTimeout(() => {
-      applyAiSuggestions(coverDays, demand)
+      applySuggestions(coverDays, demand)
       setGenerating(false)
-    }, 450)
+    }, 300)
   }
 
-  // Live AI Summary bullets powered by real stock, shelf-life, hand-cooked jellies, and waste data
-  const aiSummaryBullets = useMemo(() => {
+  const summaryBullets = useMemo(() => {
     const urgentStoreItems = ingredients.filter(
       (i) => !i.isHandCooked && (i.isBelowThreshold || i.daysLeft <= 1.5)
     )
     const urgentJellies = ingredients.filter(
       (i) => i.isHandCooked && (i.isBelowThreshold || i.daysLeft <= 1.5)
     )
-    const wellStockedItems = ingredients.filter(
-      (i) => !i.isBelowThreshold && i.totalStock >= i.parLevel * 0.9
-    )
-    const cappedPerishables = ingredients.filter(
-      (i) => (i.shelfLifeDays || 7) < coverDays
-    )
     const wastedItems = ingredients.filter((i) => (i.recentWasteQty || 0) > 0)
 
     const bullets: Array<{ key: string; content: React.ReactNode }> = []
-
-    // Bullet 1: Urgent store-bought items needing order today
     if (urgentStoreItems.length > 0) {
       bullets.push({
-        key: 'urgent-store',
+        key: 'urgent-buy',
         content: (
           <>
-            <strong>
-              {urgentStoreItems.length} store-bought {urgentStoreItems.length === 1 ? 'item needs' : 'items need'} ordering today:
-            </strong>{' '}
-            {urgentStoreItems.map((i) => `${i.name} (${i.totalStock} ${i.unit} left)`).join(', ')}.
+            <strong>Buy soon:</strong> {urgentStoreItems.map((i) => i.name).join(', ')}
           </>
         ),
       })
     } else {
       bullets.push({
-        key: 'urgent-store-ok',
-        content: (
-          <>
-            <strong>All store-bought staples are above critical threshold today</strong> — routine replenishment only.
-          </>
-        ),
+        key: 'store-ok',
+        content: <>Store-bought ingredients have enough stock for now.</>,
       })
     }
 
-    // Bullet 2: Hand-cooked jellies (in-house kitchen prep)
     if (urgentJellies.length > 0) {
       bullets.push({
         key: 'jellies-prep',
         content: (
           <>
-            <strong>
-              🍳 {urgentJellies.length} hand-cooked {urgentJellies.length === 1 ? 'jelly needs' : 'jellies need'} in-house kitchen prep today:
-            </strong>{' '}
-            {urgentJellies.map((j) => `${j.name} (${j.totalStock} ${j.unit})`).join(', ')} — cooked in-house, not bought pre-made.
-          </>
-        ),
-      })
-    } else {
-      bullets.push({
-        key: 'jellies-ok',
-        content: (
-          <>
-            <strong>🍳 Hand-Cooked Jellies</strong> are sufficiently prepped in the walk-in cooler for current burn rates.
+            <strong>Kitchen prep needed:</strong> cook fresh{' '}
+            {urgentJellies.map((i) => i.name).join(', ')}
           </>
         ),
       })
     }
 
-    // Bullet 3: Demand scaling & well-stocked items
-    const highVelocity = [...ingredients]
-      .sort((a, b) => (b.dailyUsage || 0) - (a.dailyUsage || 0))
-      .slice(0, 2)
-    const highVelNames = highVelocity.map((i) => i.name).join(' and ')
-    if (demand !== 'normal') {
+    if (wastedItems.length > 0) {
       bullets.push({
-        key: 'demand-scale',
+        key: 'waste-note',
         content: (
           <>
-            <strong>{DEMAND_LABELS[demand]} active:</strong> high-velocity items ({highVelNames}) are scaled for a{' '}
-            <strong>{coverDays}-day</strong> coverage window.
-            {wellStockedItems.length > 0 && (
-              <>
-                {' '}Well-stocked items (<strong>{wellStockedItems.slice(0, 3).map((i) => i.name).join(', ')}</strong>) are kept at minimal top-up.
-              </>
-            )}
-          </>
-        ),
-      })
-    } else if (wellStockedItems.length > 0) {
-      bullets.push({
-        key: 'well-stocked',
-        content: (
-          <>
-            <strong>{wellStockedItems.map((i) => i.name).join(', ')}</strong>{' '}
-            {wellStockedItems.length === 1 ? 'is' : 'are'} well stocked ({wellStockedItems.map((i) => `${i.totalStock} ${i.unit}`).join(', ')}) to avoid over-buying.
-          </>
-        ),
-      })
-    }
-
-    // Bullet 4: Perishables shelf-life cap & real waste protection
-    if (cappedPerishables.length > 0 || wastedItems.length > 0) {
-      bullets.push({
-        key: 'waste-cap',
-        content: (
-          <>
-            {cappedPerishables.length > 0 && (
-              <>
-                <strong>Perishables</strong> ({cappedPerishables.slice(0, 4).map((i) => `${i.name} · ${i.shelfLifeDays}d limit`).join(', ')}) are capped below the {coverDays}-day window by shelf life to prevent spoilage.{' '}
-              </>
-            )}
-            {wastedItems.length > 0 && (
-              <>
-                <strong>Live waste alert:</strong> recent spoilage logged on{' '}
-                <strong>
-                  {wastedItems.map((w) => `${w.name} (${w.recentWasteQty} ${w.unit})`).join(', ')}
-                </strong>{' '}
-                — order conservatively.
-              </>
-            )}
-          </>
-        ),
-      })
-    } else {
-      bullets.push({
-        key: 'waste-clean',
-        content: (
-          <>
-            <strong>Zero recent spoilage logged</strong> and all perishables fit safely within the {coverDays}-day shelf-life window.
+            <strong>Recent spoilage:</strong>{' '}
+            {wastedItems.map((w) => `${w.name} (${w.recentWasteQty} ${w.unit})`).join(', ')} — buy conservatively.
           </>
         ),
       })
     }
 
     return bullets
-  }, [ingredients, coverDays, demand])
+  }, [ingredients])
 
   // Filters
   const [selectedDept, setSelectedDept] = useState<string>('All')
@@ -274,7 +206,6 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
   const [restockSuccess, setRestockSuccess] = useState<string | null>(null)
   const [restockError, setRestockError] = useState<string | null>(null)
 
-  // Toggle item check state
   function toggleItem(id: string) {
     setCheckedIds((prev) => {
       const next = new Set(prev)
@@ -287,23 +218,23 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
     })
   }
 
-  // Adjust quantity
-  function adjustQty(id: string, delta: number) {
+  function adjustQty(item: GroceryItem, delta: number) {
+    const minVal = supportsHalfStep(item.unit) ? 0.5 : 1
     setQuantities((prev) => {
-      const current = prev[id] ?? 1
-      const updated = Math.max(1, current + delta)
-      return { ...prev, [id]: updated }
+      const current = prev[item.id] ?? recommendedById[item.id] ?? item.suggestedQty
+      const updated = Math.max(minVal, Math.round((current + delta) * 100) / 100)
+      return { ...prev, [item.id]: updated }
     })
   }
 
-  function setDirectQty(id: string, val: number) {
+  function setDirectQty(item: GroceryItem, val: number) {
+    const minVal = supportsHalfStep(item.unit) ? 0.1 : 1
     setQuantities((prev) => ({
       ...prev,
-      [id]: Math.max(1, isNaN(val) ? 1 : val),
+      [item.id]: Number.isFinite(val) && val > 0 ? Math.round(val * 100) / 100 : minVal,
     }))
   }
 
-  // Filtered ingredients list
   const filteredItems = useMemo(() => {
     return ingredients.filter((item) => {
       if (selectedDept !== 'All' && item.department !== selectedDept) {
@@ -322,7 +253,6 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
     })
   }, [ingredients, selectedDept, lowStockOnly, searchQuery])
 
-  // Group items by department
   const groupedItems = useMemo(() => {
     const groups: Record<string, GroceryItem[]> = {}
     for (const item of filteredItems) {
@@ -333,12 +263,11 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
     return groups
   }, [filteredItems])
 
-  // Total shopping basket valuation
   const basketValuation = useMemo(() => {
     let total = 0
     let checkedTotal = 0
     for (const item of filteredItems) {
-      const qty = quantities[item.id] ?? item.suggestedQty
+      const qty = quantities[item.id] ?? recommendedById[item.id] ?? item.suggestedQty
       const cost = qty * (item.costPerUnit > 0 ? item.costPerUnit : 4.5)
       total += cost
       if (checkedIds.has(item.id)) {
@@ -349,20 +278,21 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
       total: Math.round(total * 100) / 100,
       checkedTotal: Math.round(checkedTotal * 100) / 100,
     }
-  }, [filteredItems, quantities, checkedIds])
+  }, [filteredItems, quantities, recommendedById, checkedIds])
 
-  // Items currently selected/checked for restock
   const checkedItemsList = useMemo(() => {
     return ingredients
       .filter((item) => checkedIds.has(item.id))
-      .map((item) => ({
-        ...item,
-        buyQty: quantities[item.id] ?? item.suggestedQty,
-        totalCost: (quantities[item.id] ?? item.suggestedQty) * (item.costPerUnit > 0 ? item.costPerUnit : 4.5),
-      }))
-  }, [ingredients, checkedIds, quantities])
+      .map((item) => {
+        const buyQty = quantities[item.id] ?? recommendedById[item.id] ?? item.suggestedQty
+        return {
+          ...item,
+          buyQty,
+          totalCost: buyQty * (item.costPerUnit > 0 ? item.costPerUnit : 4.5),
+        }
+      })
+  }, [ingredients, checkedIds, quantities, recommendedById])
 
-  // Submit batch restock to Supabase
   async function handleConfirmRestock() {
     if (checkedItemsList.length === 0) return
 
@@ -376,15 +306,15 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
         unitCost: item.costPerUnit,
       }))
 
-      const note = `Grocery restock run: ${shoppingLocation}`
+      const note = `Grocery run: ${shoppingLocation}`
       const res = await submitBatchRestockAction(itemsToRestock, note)
 
       if (!res.success) {
-        setRestockError(res.error || 'Failed to submit batch restock')
+        setRestockError(res.error || 'Could not add items to stock.')
         return
       }
 
-      setRestockSuccess(`Successfully logged ${itemsToRestock.length} items into inventory!`)
+      setRestockSuccess(`Added ${itemsToRestock.length} checked items into stock!`)
       setIsRestockModalOpen(false)
       setCheckedIds(new Set())
       router.refresh()
@@ -395,38 +325,40 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
     }
   }
 
-  // Copy shopping list to clipboard
   function handleCopyList() {
-    let text = `🛒 CHÈ BÔNG GROCERY SHOPPING LIST\n`
-    text += `Date: ${new Date().toLocaleDateString()}\n`
+    let text = `🛒 CHÈ BÔNG BUY LIST\n`
+    text += `Date: ${dateLabel || 'Today'}\n`
     text += `Est. Total: $${basketValuation.total.toFixed(2)}\n\n`
 
     for (const [dept, items] of Object.entries(groupedItems)) {
       text += `📍 ${dept.toUpperCase()}:\n`
       for (const item of items) {
-        const qty = quantities[item.id] ?? item.suggestedQty
+        const qty = quantities[item.id] ?? recommendedById[item.id] ?? item.suggestedQty
         const checkedMark = checkedIds.has(item.id) ? '✅' : '⬜'
-        text += `${checkedMark} ${item.name}: ${qty} ${item.unit} (Stock: ${item.totalStock} ${item.unit})\n`
+        text += `${checkedMark} ${item.name}: ${qty} ${item.unit} (On hand: ${item.totalStock} ${item.unit})\n`
       }
       text += '\n'
     }
 
     navigator.clipboard.writeText(text).then(() => {
-      alert('Shopping checklist copied to clipboard! Ready to paste into iMessage or Notes.')
+      alert('Buy list copied! Ready to paste into Messages or Notes.')
     })
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {dateLabel || 'Today'} · Grocery Shopping Run
+            {dateLabel || 'Today'} · Store Run &amp; Kitchen Prep
           </p>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
-            {isManagerView ? 'Manager Grocery Buying Checklist' : 'Staff Shopping Checklist'}
+            Buy List
           </h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            Check off items as you shop, tap + / − to adjust amounts, then add to stock.
+          </p>
         </div>
         {isManagerView ? (
           <div className="hidden md:block">
@@ -438,12 +370,13 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
       </div>
 
       {restockSuccess && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between gap-3 text-green-900 text-xs font-bold animate-in fade-in duration-300">
+        <div className="p-4 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between gap-3 text-green-900 text-xs font-bold">
           <div className="flex items-center gap-2">
             <span className="text-lg">🎉</span>
             <span>{restockSuccess}</span>
           </div>
           <button
+            type="button"
             onClick={() => setRestockSuccess(null)}
             className="text-green-700 hover:text-green-900 p-1"
           >
@@ -452,223 +385,182 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
         </div>
       )}
 
-      {/* Main Container */}
-      <div className="max-w-4xl mx-auto space-y-5">
-        {/* AI Demand Planner & Smart Restock Controls Card */}
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 sm:p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center shrink-0 text-xl">
-                ✨
+      <div className="max-w-4xl mx-auto space-y-4">
+        {/* Compact Toolbar Card */}
+        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 space-y-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                <span className="text-xs font-extrabold text-emerald-800">
+                  {checkedIds.size} / {ingredients.length} checked
+                </span>
               </div>
-              <div>
-                <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">
-                  AI Demand Planner &amp; &apos;To-Buy&apos; Grocery Checklist
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  AI reviews sales velocity, live stock, shelf life, and waste history to draft your categorized market run.
-                </p>
+              <div className="text-xs text-gray-600 font-semibold">
+                Est. Total: <strong className="text-gray-900">${basketValuation.total.toFixed(2)}</strong>
               </div>
             </div>
 
-            <div className="text-left sm:text-right bg-orange-50/50 sm:bg-transparent p-3 sm:p-0 rounded-xl border border-orange-100 sm:border-0 shrink-0">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                ESTIMATED BASKET TOTAL
-              </p>
-              <p className="text-2xl sm:text-3xl font-black text-gray-900">
-                ${basketValuation.total.toFixed(2)}
-              </p>
-              <p className="text-[11px] text-gray-500 mt-0.5">
-                {checkedIds.size} of {ingredients.length} items checked off (${basketValuation.checkedTotal.toFixed(2)})
-              </p>
-            </div>
-          </div>
-
-          {/* Cover Days + Expected Demand Selector Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider">
-                Cover how many days?
-              </label>
-              <div className="relative">
-                <select
-                  value={coverDays}
-                  onChange={(e) => {
-                    const nextDays = Number(e.target.value)
-                    setCoverDays(nextDays)
-                    applyAiSuggestions(nextDays, demand)
-                  }}
-                  className="w-full appearance-none bg-gray-50 hover:bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-[#e85d04] pr-9 shadow-2xs transition-colors"
-                >
-                  {COVER_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider">
-                Expected demand
-              </label>
-              <div className="relative">
-                <select
-                  value={demand}
-                  onChange={(e) => {
-                    const nextDemand = e.target.value
-                    setDemand(nextDemand)
-                    applyAiSuggestions(coverDays, nextDemand)
-                  }}
-                  className="w-full appearance-none bg-gray-50 hover:bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-[#e85d04] pr-9 shadow-2xs transition-colors"
-                >
-                  <option value="normal">Normal week (1.0x)</option>
-                  <option value="busy">Busy week (+20%)</option>
-                  <option value="slow">Slow week (−20%)</option>
-                  <option value="peak">Peak season (+50%)</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-end">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleRegenerateAi}
-                disabled={generating}
-                className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-bold py-2.5 px-4 rounded-xl text-xs tracking-wide active:scale-98 transition-all disabled:opacity-70 shadow-xs flex items-center justify-center gap-1.5"
+                onClick={() => setShowPlanSettings((v) => !v)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                  showPlanSettings
+                    ? 'bg-orange-50 text-[#e85d04] border-orange-200'
+                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                }`}
               >
-                {generating ? (
-                  <>
-                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    <span>Recalculating AI Plan...</span>
-                  </>
-                ) : (
-                  <span>✨ Regenerate AI Quantities</span>
-                )}
+                {showPlanSettings ? 'Hide Plan Settings ▲' : `Plan: ${coverDays}d · ${DEMAND_LABELS[demand]} ▼`}
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyList}
+                className="bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs"
+              >
+                📋 Copy
               </button>
             </div>
           </div>
 
-          {/* Embedded Live AI Summary Box */}
-          <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl p-4 sm:p-5 space-y-2 shadow-2xs">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs sm:text-sm font-extrabold text-[#166534] flex items-center gap-1.5">
-                <span>🤖</span>
-                <span>AI Summary · Live Stock, Shelf-Life &amp; Waste Intelligence</span>
-              </p>
-              <span className="text-[10px] font-bold bg-white/80 text-[#166534] border border-[#bbf7d0] px-2 py-0.5 rounded-full">
-                {coverDays}d cover · {DEMAND_LABELS[demand]}
-              </span>
-            </div>
-            <ul className="space-y-1.5 text-xs text-[#15803d] leading-relaxed">
-              {aiSummaryBullets.map((b) => (
-                <li key={b.key}>• {b.content}</li>
-              ))}
-            </ul>
-          </div>
-
           {/* Progress Bar */}
-          <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
             <div
-              className="bg-emerald-500 h-2.5 rounded-full transition-all duration-300"
+              className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
               style={{
                 width: `${ingredients.length > 0 ? (checkedIds.size / ingredients.length) * 100 : 0}%`,
               }}
             />
           </div>
 
-          {/* Actions & Filters Toolbar */}
-          <div className="space-y-3 pt-1">
-            {/* Department Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-              {DEPARTMENTS.map((dept) => {
-                const isActive = selectedDept === dept
-                return (
-                  <button
-                    key={dept}
-                    onClick={() => setSelectedDept(dept)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                      isActive
-                        ? 'bg-gray-900 text-white shadow-xs'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
-                    }`}
+          {/* Collapsible Plan Settings & Notes */}
+          {showPlanSettings && (
+            <div className="pt-2 border-t border-gray-100 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-gray-600 uppercase">
+                    Cover how many days?
+                  </label>
+                  <select
+                    value={coverDays}
+                    onChange={(e) => {
+                      const nextDays = Number(e.target.value)
+                      setCoverDays(nextDays)
+                      applySuggestions(nextDays, demand)
+                    }}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
                   >
-                    {dept === 'All' ? 'All Aisles' : dept}
-                  </button>
-                )
-              })}
-            </div>
+                    {COVER_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Search & Low Stock Toggle */}
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="relative flex-1 w-full">
-                <input
-                  type="text"
-                  placeholder="Search ingredient by name or aisle..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-2.5 text-xs text-gray-400"
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-bold text-gray-600 uppercase">
+                    How busy is this week?
+                  </label>
+                  <select
+                    value={demand}
+                    onChange={(e) => {
+                      const nextDemand = e.target.value
+                      setDemand(nextDemand)
+                      applySuggestions(coverDays, nextDemand)
+                    }}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
                   >
-                    ✕
+                    <option value="normal">Normal week</option>
+                    <option value="busy">Busy week (+20%)</option>
+                    <option value="slow">Slow week (−20%)</option>
+                    <option value="peak">Peak week (+50%)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={handleRecalculate}
+                    disabled={generating}
+                    className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-bold py-2 px-3 rounded-xl text-xs"
+                  >
+                    {generating ? 'Updating...' : 'Reset to Recommended'}
                   </button>
-                )}
+                </div>
               </div>
 
-              <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 space-y-1">
+                {summaryBullets.map((b) => (
+                  <p key={b.key}>• {b.content}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Aisle Filter Pills & Search */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+            {DEPARTMENTS.map((dept) => {
+              const isActive = selectedDept === dept
+              return (
                 <button
+                  key={dept}
                   type="button"
-                  onClick={() => setLowStockOnly(!lowStockOnly)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
-                    lowStockOnly
-                      ? 'bg-red-50 text-red-700 border-red-200 shadow-2xs'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  onClick={() => setSelectedDept(dept)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    isActive
+                      ? 'bg-gray-900 text-white shadow-xs'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${lowStockOnly ? 'bg-red-500' : 'bg-gray-300'}`} />
-                  <span>Below Threshold Only</span>
+                  {dept === 'All' ? 'All Aisles' : dept}
                 </button>
+              )
+            })}
+          </div>
 
+          <div className="flex flex-col sm:flex-row items-center gap-2.5">
+            <div className="relative flex-1 w-full">
+              <input
+                type="text"
+                placeholder="Search item..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+              />
+              {searchQuery && (
                 <button
                   type="button"
-                  onClick={handleCopyList}
-                  className="bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-2xs shrink-0"
-                  title="Copy formatted shopping list to clipboard"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-2 text-xs text-gray-400"
                 >
-                  📋 Copy List
+                  ✕
                 </button>
-              </div>
+              )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setLowStockOnly(!lowStockOnly)}
+              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                lowStockOnly
+                  ? 'bg-red-50 text-red-700 border-red-200 shadow-2xs'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${lowStockOnly ? 'bg-red-500' : 'bg-gray-300'}`} />
+              <span>Low Stock Only</span>
+            </button>
           </div>
         </div>
 
-        {/* Categorized Department Sections */}
+        {/* Categorized Checklist */}
         {Object.keys(groupedItems).length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-xs text-gray-400">
-            No ingredients match your selected filter criteria.
+            No items match your filter.
           </div>
         ) : (
           Object.entries(groupedItems).map(([dept, items]) => (
-            <div key={dept} className="space-y-3">
-              {/* Department Section Header */}
+            <div key={dept} className="space-y-2.5">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-base">
@@ -687,41 +579,43 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
                   </h3>
                   {dept === 'Hand-Cooked Jellies' && (
                     <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
-                      Cooked In-House · Log Fresh Kitchen Batch
+                      Made In-House
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] text-gray-400">
-                  {items.filter((i) => checkedIds.has(i.id)).length}/{items.length} {dept === 'Hand-Cooked Jellies' ? 'prepped' : 'bought'}
+                <span className="text-[11px] font-semibold text-gray-500">
+                  {items.filter((i) => checkedIds.has(i.id)).length}/{items.length}{' '}
+                  {dept === 'Hand-Cooked Jellies' ? 'prepped' : 'checked'}
                 </span>
               </div>
 
-              {/* Checklist Cards in this Department */}
               <div className="space-y-2.5">
                 {items.map((item) => {
                   const isChecked = checkedIds.has(item.id)
-                  const buyQty = quantities[item.id] ?? item.suggestedQty
+                  const recQty = recommendedById[item.id] ?? item.suggestedQty
+                  const buyQty = quantities[item.id] ?? recQty
+                  const deltaFromRec = Math.round((buyQty - recQty) * 100) / 100
                   const itemCost = buyQty * (item.costPerUnit > 0 ? item.costPerUnit : 4.5)
+                  const halfStep = supportsHalfStep(item.unit)
 
                   return (
                     <div
                       key={item.id}
-                      className={`bg-white rounded-2xl border transition-all p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3 ${
+                      className={`bg-white rounded-2xl border transition-all p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                         isChecked
-                          ? 'border-emerald-200 bg-emerald-50/20'
+                          ? 'border-emerald-300 bg-emerald-50/25'
                           : item.isBelowThreshold
-                          ? 'border-red-200 hover:border-red-300'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-red-200'
+                          : 'border-gray-200'
                       }`}
                     >
-                      {/* Left: Checkbox & Name with Strike-through */}
+                      {/* Tap Checkbox + Name */}
                       <div
                         onClick={() => toggleItem(item.id)}
-                        className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer select-none"
+                        className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0 cursor-pointer select-none"
                       >
-                        {/* Interactive Checkbox */}
                         <div
-                          className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors shrink-0 ${
+                          className={`w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-colors shrink-0 mt-0.5 sm:mt-0 ${
                             isChecked
                               ? 'bg-emerald-600 border-emerald-600 text-white'
                               : 'border-gray-300 bg-white hover:border-gray-400'
@@ -738,102 +632,114 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
                           )}
                         </div>
 
-                        {/* Item Info */}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
-                              className={`text-sm sm:text-base font-extrabold transition-all ${
-                                isChecked
-                                  ? 'line-through text-gray-400'
-                                  : 'text-gray-900'
+                              className={`text-sm sm:text-base font-extrabold ${
+                                isChecked ? 'line-through text-gray-400' : 'text-gray-900'
                               }`}
                             >
                               {item.name}
                             </span>
 
-                            {item.isHandCooked && (
-                              <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
-                                🍳 Hand-Cooked (In-House)
+                            {item.isBelowThreshold && (
+                              <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                                Low Stock
                               </span>
                             )}
 
-                            {item.isBelowThreshold && (
-                              <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full shrink-0">
-                                Low Stock
+                            {deltaFromRec > 0 && (
+                              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                                +{deltaFromRec} extra
+                              </span>
+                            )}
+                            {deltaFromRec < 0 && (
+                              <span className="text-[10px] font-bold text-gray-600 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
+                                {deltaFromRec} vs rec.
                               </span>
                             )}
                           </div>
 
                           <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
                             <span>
-                              On Hand: <strong className="text-gray-800">{item.totalStock} {item.unit}</strong>
+                              On hand: <strong className="text-gray-800">{item.totalStock} {item.unit}</strong>
                             </span>
                             <span>·</span>
                             <span>
-                              {item.daysLeft.toFixed(1)}d left ({item.dailyUsage} {item.unit}/d)
+                              Recommended: <strong className="text-emerald-700">{recQty} {item.unit}</strong>
                             </span>
                             <span>·</span>
-                            <span className="text-[11px] text-gray-400 font-medium">
-                              ~${(item.costPerUnit > 0 ? item.costPerUnit : 4.5).toFixed(2)}/{item.unit}
+                            <span className="text-[11px] text-gray-400">
+                              ~${itemCost.toFixed(2)}
                             </span>
-                            {item.shelfLifeDays < coverDays && (
-                              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
-                                Capped to {item.shelfLifeDays}d shelf life
-                              </span>
-                            )}
-                            {(item.recentWasteQty || 0) > 0 && (
-                              <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
-                                ⚠️ {item.recentWasteQty} {item.unit} recent waste
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Right: Quantity Stepper & Cost */}
-                      <div className="flex items-center gap-3 shrink-0">
-                        {/* Interactive Quantity Adjuster */}
-                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-0.5">
+                      {/* Right: Big Thumb-Friendly Quantity Stepper */}
+                      <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pl-10 sm:pl-0">
+                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl p-1 gap-1">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              adjustQty(item.id, -1)
+                              adjustQty(item, -1)
                             }}
-                            className="w-7 h-7 flex items-center justify-center text-gray-600 hover:text-gray-900 font-black rounded-lg hover:bg-gray-200/70 active:scale-95 transition-all text-xs"
+                            aria-label={`Decrease ${item.name} by 1`}
+                            className="w-10 h-10 flex items-center justify-center text-gray-700 hover:text-gray-900 font-black rounded-lg bg-white border border-gray-200/70 hover:bg-gray-100 active:scale-95 text-sm"
                           >
-                            −
+                            −1
                           </button>
-                          <input
-                            type="number"
-                            min="1"
-                            value={buyQty}
-                            onChange={(e) => {
-                              setDirectQty(item.id, parseFloat(e.target.value))
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-12 text-center text-xs font-black text-gray-900 bg-transparent focus:outline-none"
-                          />
+                          {halfStep && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                adjustQty(item, -0.5)
+                              }}
+                              aria-label={`Decrease ${item.name} by 0.5`}
+                              className="w-9 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 font-bold rounded-lg hover:bg-gray-200/70 active:scale-95 text-xs"
+                            >
+                              −.5
+                            </button>
+                          )}
+                          <div className="flex flex-col items-center px-1">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step={halfStep ? '0.1' : '1'}
+                              min={halfStep ? '0.1' : '1'}
+                              value={buyQty}
+                              onChange={(e) => setDirectQty(item, parseFloat(e.target.value))}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-12 text-center text-sm font-black text-gray-900 bg-transparent focus:outline-none"
+                            />
+                            <span className="text-[10px] text-gray-400 -mt-1">{item.unit}</span>
+                          </div>
+                          {halfStep && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                adjustQty(item, 0.5)
+                              }}
+                              aria-label={`Increase ${item.name} by 0.5`}
+                              className="w-9 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 font-bold rounded-lg hover:bg-gray-200/70 active:scale-95 text-xs"
+                            >
+                              +.5
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              adjustQty(item.id, 1)
+                              adjustQty(item, 1)
                             }}
-                            className="w-7 h-7 flex items-center justify-center text-gray-600 hover:text-gray-900 font-black rounded-lg hover:bg-gray-200/70 active:scale-95 transition-all text-xs"
+                            aria-label={`Increase ${item.name} by 1`}
+                            className="w-10 h-10 flex items-center justify-center text-[#e85d04] font-black rounded-lg bg-orange-50 border border-orange-200 hover:bg-orange-100 active:scale-95 text-sm"
                           >
-                            +
+                            +1
                           </button>
-                        </div>
-
-                        {/* Price */}
-                        <div className="text-right min-w-[55px]">
-                          <span className={`text-xs font-black block ${isChecked ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                            ${itemCost.toFixed(2)}
-                          </span>
-                          <span className="text-[10px] text-gray-400">
-                            {item.unit}
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -844,28 +750,25 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
           ))
         )}
 
-        {/* BOTTOM ACTION BAR: 'Restock Checked' shortcut */}
+        {/* Sticky Bottom Action Bar */}
         <div className="sticky bottom-20 md:bottom-6 z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200 p-4 shadow-xl flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold text-gray-800">
-              {checkedIds.size} items checked off
+            <p className="text-xs sm:text-sm font-extrabold text-gray-900">
+              {checkedIds.size} item{checkedIds.size === 1 ? '' : 's'} checked
             </p>
             <p className="text-[11px] text-gray-500">
-              Ready to log groceries into live inventory?
+              Est. ${basketValuation.checkedTotal.toFixed(2)} · Tap to add into stock
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={checkedIds.size === 0}
-              onClick={() => setIsRestockModalOpen(true)}
-              className="bg-[#e85d04] hover:bg-[#d45203] disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 shrink-0 flex items-center gap-1.5"
-            >
-              <span>📦</span>
-              <span>Restock Checked ({checkedIds.size})</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={checkedIds.size === 0}
+            onClick={() => setIsRestockModalOpen(true)}
+            className="bg-[#e85d04] hover:bg-[#d45203] disabled:opacity-50 text-white text-xs sm:text-sm font-extrabold px-5 py-3 rounded-xl shadow-xs transition-all active:scale-95 shrink-0"
+          >
+            Add Checked to Stock ({checkedIds.size})
+          </button>
         </div>
       </div>
 
@@ -882,13 +785,14 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
             <div className="flex items-start justify-between pb-3 border-b border-gray-100">
               <div>
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Confirm Restock Batch
+                  Confirm Store Run
                 </span>
                 <h3 className="text-lg font-black text-gray-900 mt-0.5">
-                  Receive Grocery Items
+                  Add Checked Items to Stock
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsRestockModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm font-bold"
               >
@@ -903,22 +807,38 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
             )}
 
             <div className="space-y-3">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Store / Supplier Run
+                  Where did you get these?
                 </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {STORE_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setShoppingLocation(preset)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                        shoppingLocation === preset
+                          ? 'bg-orange-50 text-[#e85d04] border-[#e85d04]'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="text"
                   value={shoppingLocation}
                   onChange={(e) => setShoppingLocation(e.target.value)}
-                  placeholder="e.g. Costco, Restaurant Depot, 99 Ranch"
+                  placeholder="Or type store name..."
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Items to Restock ({checkedItemsList.length})
+                  Items Being Added ({checkedItemsList.length})
                 </label>
                 <div className="max-h-56 overflow-y-auto divide-y divide-gray-100 bg-gray-50 rounded-2xl p-3 border border-gray-200 text-xs">
                   {checkedItemsList.map((item) => (
@@ -937,7 +857,7 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
               </div>
 
               <div className="bg-orange-50/60 border border-orange-200/60 rounded-xl p-3 flex items-center justify-between text-xs">
-                <span className="font-bold text-orange-950">Total Restock Valuation:</span>
+                <span className="font-bold text-orange-950">Estimated Total Cost:</span>
                 <span className="font-black text-orange-950 text-sm">
                   ${checkedItemsList.reduce((sum, i) => sum + i.totalCost, 0).toFixed(2)}
                 </span>
@@ -958,7 +878,7 @@ export default function GroceriesClient({ ingredients, isManagerView = false, da
                 onClick={handleConfirmRestock}
                 className="bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-xs disabled:opacity-50 active:scale-95"
               >
-                {isSubmittingRestock ? 'Logging Batches...' : 'Confirm & Add to Stock'}
+                {isSubmittingRestock ? 'Adding to Stock...' : 'Confirm & Add to Stock'}
               </button>
             </div>
           </div>

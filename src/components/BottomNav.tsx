@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-// Icons
 function HomeIcon({ active }: { active: boolean }) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
@@ -14,7 +13,7 @@ function HomeIcon({ active }: { active: boolean }) {
   )
 }
 
-function RestockIcon({ active }: { active: boolean }) {
+function StockIcon({ active }: { active: boolean }) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -25,7 +24,7 @@ function RestockIcon({ active }: { active: boolean }) {
   )
 }
 
-function CycleCountIcon({ active }: { active: boolean }) {
+function CountIcon({ active }: { active: boolean }) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -35,13 +34,23 @@ function CycleCountIcon({ active }: { active: boolean }) {
   )
 }
 
-function GroceriesIcon({ active }: { active: boolean }) {
+function BuyListIcon({ active }: { active: boolean }) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="9" cy="21" r="1"/>
       <circle cx="20" cy="21" r="1"/>
       <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.57L23 6H6"/>
+    </svg>
+  )
+}
+
+function CloseDayIcon({ active }: { active: boolean }) {
+  const color = active ? '#e85d04' : '#6b7280'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
     </svg>
   )
 }
@@ -58,7 +67,7 @@ function RecipeIcon({ active }: { active: boolean }) {
   )
 }
 
-function ThresholdIcon({ active }: { active: boolean }) {
+function RulesIcon({ active }: { active: boolean }) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -68,7 +77,7 @@ function ThresholdIcon({ active }: { active: boolean }) {
   )
 }
 
-function ReportIcon({ active }: { active: boolean }) {
+function ActivityIcon({ active }: { active: boolean }) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -82,18 +91,23 @@ function ReportIcon({ active }: { active: boolean }) {
 }
 
 const staffNavItems = [
-  { href: '/staff/dashboard', label: 'Dashboard', Icon: HomeIcon },
-  { href: '/staff/restock', label: 'Restock', Icon: RestockIcon },
-  { href: '/staff/cycle-count', label: 'Cycle Count', Icon: CycleCountIcon },
-  { href: '/staff/groceries', label: 'Groceries', Icon: GroceriesIcon },
+  { href: '/staff/dashboard', label: 'Today', Icon: HomeIcon, matchPaths: ['/staff/dashboard'] },
+  {
+    href: '/staff/stock',
+    label: 'Stock In/Out',
+    Icon: StockIcon,
+    matchPaths: ['/staff/stock', '/staff/restock', '/staff/waste'],
+  },
+  { href: '/staff/cycle-count', label: 'Count Stock', Icon: CountIcon, matchPaths: ['/staff/cycle-count'] },
+  { href: '/staff/groceries', label: 'Buy List', Icon: BuyListIcon, matchPaths: ['/staff/groceries'] },
 ]
 
 const managerNavItems = [
-  { href: '/manager/dashboard', label: 'Overview', Icon: HomeIcon },
-  { href: '/manager/recipes', label: 'Recipes', Icon: RecipeIcon },
-  { href: '/manager/thresholds', label: 'Thresholds', Icon: ThresholdIcon },
-  { href: '/manager/groceries', label: 'Groceries', Icon: GroceriesIcon },
-  { href: '/manager/reports', label: 'Logs', Icon: ReportIcon },
+  { href: '/manager/dashboard', label: 'Today', Icon: HomeIcon, matchPaths: ['/manager/dashboard'] },
+  { href: '/manager/close-day', label: 'Close Day', Icon: CloseDayIcon, matchPaths: ['/manager/close-day'] },
+  { href: '/manager/recipes', label: 'Recipes', Icon: RecipeIcon, matchPaths: ['/manager/recipes'] },
+  { href: '/manager/thresholds', label: 'Stock Rules', Icon: RulesIcon, matchPaths: ['/manager/thresholds', '/manager/groceries'] },
+  { href: '/manager/reports', label: 'Activity', Icon: ActivityIcon, matchPaths: ['/manager/reports'] },
 ]
 
 export default function BottomNav() {
@@ -103,15 +117,15 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 surface-glass border-t border-gray-200/80 md:hidden select-none pb-safe">
-      <div className="flex items-center justify-around h-16 px-2 max-w-md mx-auto">
-        {items.map(({ href, label, Icon }) => {
-          const active = pathname === href || (href !== '/staff/dashboard' && href !== '/manager/dashboard' && pathname.startsWith(href))
+      <div className="flex items-center justify-around h-16 px-1.5 max-w-lg mx-auto">
+        {items.map(({ href, label, Icon, matchPaths }) => {
+          const active = matchPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`))
           return (
             <Link
               key={href}
               href={href}
               prefetch={true}
-              className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] px-2 py-1.5 rounded-xl transition-all duration-200 active:scale-95 ${
+              className={`flex flex-col items-center justify-center gap-0.5 min-w-[58px] px-1.5 py-1.5 rounded-xl transition-all duration-200 active:scale-95 ${
                 active ? 'text-[#e85d04]' : 'text-gray-500 hover:text-gray-800'
               }`}
             >
@@ -124,7 +138,7 @@ export default function BottomNav() {
               >
                 <Icon active={active} />
               </div>
-              <span className={`text-[10px] font-bold transition-colors ${active ? 'text-[#e85d04]' : 'text-gray-500'}`}>
+              <span className={`text-[10px] font-bold transition-colors whitespace-nowrap ${active ? 'text-[#e85d04]' : 'text-gray-500'}`}>
                 {label}
               </span>
             </Link>

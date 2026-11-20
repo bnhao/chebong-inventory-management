@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 interface NavItem {
   href: string
   label: string
+  matchPaths: string[]
   icon: (active: boolean) => React.ReactNode
 }
 
@@ -19,7 +20,7 @@ function HomeIcon(active: boolean) {
   )
 }
 
-function RestockIcon(active: boolean) {
+function StockIcon(active: boolean) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +31,7 @@ function RestockIcon(active: boolean) {
   )
 }
 
-function CycleCountIcon(active: boolean) {
+function CountIcon(active: boolean) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -40,7 +41,7 @@ function CycleCountIcon(active: boolean) {
   )
 }
 
-function GroceriesIcon(active: boolean) {
+function BuyListIcon(active: boolean) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -52,10 +53,15 @@ function GroceriesIcon(active: boolean) {
 }
 
 const navItems: NavItem[] = [
-  { href: '/staff/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { href: '/staff/restock', label: 'Restock', icon: RestockIcon },
-  { href: '/staff/cycle-count', label: 'Cycle Count', icon: CycleCountIcon },
-  { href: '/staff/groceries', label: 'Groceries', icon: GroceriesIcon },
+  { href: '/staff/dashboard', label: 'Today', matchPaths: ['/staff/dashboard'], icon: HomeIcon },
+  {
+    href: '/staff/stock',
+    label: 'Stock In / Out',
+    matchPaths: ['/staff/stock', '/staff/restock', '/staff/waste'],
+    icon: StockIcon,
+  },
+  { href: '/staff/cycle-count', label: 'Count Stock', matchPaths: ['/staff/cycle-count'], icon: CountIcon },
+  { href: '/staff/groceries', label: 'Buy List', matchPaths: ['/staff/groceries'], icon: BuyListIcon },
 ]
 
 export default function StaffDesktopNav() {
@@ -65,7 +71,7 @@ export default function StaffDesktopNav() {
     <div className="hidden md:flex items-center gap-2">
       <div className="flex items-center surface-card rounded-2xl p-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/staff/dashboard' && pathname.startsWith(item.href))
+          const isActive = item.matchPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`))
           return (
             <Link
               key={item.href}
@@ -85,15 +91,6 @@ export default function StaffDesktopNav() {
           )
         })}
       </div>
-
-      {/* Staff Profile Avatar */}
-      <div className="w-10 h-10 rounded-full surface-card flex items-center justify-center shrink-0 ml-1 transition-transform duration-200 hover:scale-105">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-      </div>
     </div>
   )
 }
-

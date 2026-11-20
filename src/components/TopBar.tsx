@@ -36,7 +36,7 @@ export default function TopBar() {
             </div>
           </Link>
 
-          {/* Role Toggle Pill (Staff View / Manager View) */}
+          {/* Role Toggle Pill (Staff / Manager) */}
           <div className="flex items-center bg-gray-100/90 border border-gray-200/70 shadow-inner rounded-full p-1 gap-1">
             <button
               onClick={() => router.push('/staff/dashboard')}
@@ -46,7 +46,7 @@ export default function TopBar() {
                   : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
               }`}
             >
-              Staff View
+              Staff
             </button>
             <button
               onClick={() => router.push('/manager/dashboard')}
@@ -56,7 +56,7 @@ export default function TopBar() {
                   : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
               }`}
             >
-              Manager View
+              Manager
             </button>
           </div>
         </div>

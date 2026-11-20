@@ -146,12 +146,12 @@ export default function ReportsClient({
             </div>
             <div>
               <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">
-                Activity Log History &amp; Audit Ledger
+                Activity History
               </h2>
               <p className="text-xs text-gray-500">
                 {rangeKey === 'all'
-                  ? `All recorded store movements (${transactions.length} entries)`
-                  : `Showing ${fromDate} to ${toDate} (${transactions.length} entries · ${storeTimeZone})`}
+                  ? `All store changes (${transactions.length} entries)`
+                  : `Showing ${fromDate} to ${toDate} (${transactions.length} entries)`}
               </p>
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function ReportsClient({
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Export Logs CSV ({filtered.length})
+            Download CSV ({filtered.length})
           </button>
         </div>
 
@@ -232,35 +232,35 @@ export default function ReportsClient({
       {/* Top Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Manual Cycle Counts</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Counts Done</p>
           <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">
             {stats.totalAudits}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Accuracy: <strong className="text-[#2e7d32]">{stats.accuracyRate}%</strong></p>
+          <p className="text-xs text-gray-400 mt-1">Exact match: <strong className="text-[#2e7d32]">{stats.accuracyRate}%</strong></p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Net Audit Variance</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Count Difference</p>
           <p className={`text-2xl sm:text-3xl font-extrabold mt-1 ${stats.netVarianceImpact < 0 ? 'text-red-600' : stats.netVarianceImpact > 0 ? 'text-blue-700' : 'text-gray-900'}`}>
             {formatSignedCurrency(stats.netVarianceImpact)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Signed count discrepancy value</p>
+          <p className="text-xs text-gray-400 mt-1">Missing vs. extra found</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Waste Losses</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Spoiled / Tossed</p>
           <p className="text-2xl sm:text-3xl font-extrabold text-red-600 mt-1">
             -${stats.totalWasteLoss.toFixed(2)}
           </p>
-          <p className="text-xs text-red-500 mt-1 font-semibold">Recorded discarded stock</p>
+          <p className="text-xs text-red-500 mt-1 font-semibold">Cost of tossed stock</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">POS Sales COGS</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Sales Used</p>
           <p className="text-2xl sm:text-3xl font-extrabold text-purple-700 mt-1">
             -${stats.totalSalesCogs.toFixed(2)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Raw ingredient cost deducted</p>
+          <p className="text-xs text-gray-400 mt-1">Ingredients used by sales</p>
         </div>
       </div>
 
@@ -270,11 +270,11 @@ export default function ReportsClient({
           {/* Transaction Type Filter Tabs with Counts */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-gray-100/80 p-1 rounded-xl">
             {[
-              { id: 'ALL', label: 'All Logs', count: typeCounts.ALL },
-              { id: 'RESTOCK', label: '📦 Restocks', count: typeCounts.RESTOCK },
-              { id: 'WASTE', label: '🗑️ Waste', count: typeCounts.WASTE },
-              { id: 'CYCLE_COUNT', label: '📋 Audits', count: typeCounts.CYCLE_COUNT },
-              { id: 'SALE', label: '🏷️ POS Sales', count: typeCounts.SALE },
+              { id: 'ALL', label: 'All', count: typeCounts.ALL },
+              { id: 'RESTOCK', label: '📦 Added', count: typeCounts.RESTOCK },
+              { id: 'WASTE', label: '🗑️ Tossed', count: typeCounts.WASTE },
+              { id: 'CYCLE_COUNT', label: '📋 Counts', count: typeCounts.CYCLE_COUNT },
+              { id: 'SALE', label: '🏷️ Sales', count: typeCounts.SALE },
             ].map((t) => (
               <button
                 key={t.id}
