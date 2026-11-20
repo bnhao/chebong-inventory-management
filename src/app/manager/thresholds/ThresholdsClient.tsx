@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createIngredientAction } from '@/app/actions/ingredients'
 import { updateIngredientAction, UpdateIngredientInput } from '@/app/actions/inventory'
@@ -196,24 +197,27 @@ export default function ThresholdsClient({ initialIngredients }: Props) {
           <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">
             ${totalValuation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Calculated via Cost per Unit</p>
+          <p className="text-xs text-gray-400 mt-1">Based on unit cost</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 sm:p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Below Threshold</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Running Low</p>
           <p className={`text-2xl sm:text-3xl font-extrabold mt-1 ${lowStockCount > 0 ? 'text-[#e85d04]' : 'text-gray-900'}`}>
             {lowStockCount}
           </p>
-          <p className="text-xs text-orange-600 mt-1 font-semibold">Triggers automated low-stock badges</p>
+          <p className="text-xs text-orange-600 mt-1 font-semibold">Below minimum stock level</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 sm:p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Spoiled Limit Policy</p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-[#16a34a] mt-1">
-            Active
+        <Link
+          href="/manager/groceries"
+          className="bg-orange-50/70 hover:bg-orange-50 rounded-2xl border border-orange-200/90 shadow-xs p-4 sm:p-5 flex flex-col justify-between transition-all group"
+        >
+          <p className="text-xs font-bold text-[#e85d04] uppercase tracking-wider">Shopping Plan</p>
+          <p className="text-lg font-extrabold text-gray-900 group-hover:text-[#e85d04] mt-1">
+            Open Buy List →
           </p>
-          <p className="text-xs text-green-700 mt-1 font-semibold">Batches tracked against configured days</p>
-        </div>
+          <p className="text-xs text-gray-600 mt-1">Check off &amp; add store deliveries</p>
+        </Link>
       </div>
 
       {successBanner && (
@@ -349,14 +353,14 @@ export default function ThresholdsClient({ initialIngredients }: Props) {
             <thead>
               <tr className="bg-gray-50/70 text-gray-600 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
                 <th className="py-3 px-5">Ingredient</th>
-                <th className="py-3 px-4">Current Stock</th>
+                <th className="py-3 px-4">On Hand</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Low Stock Min</th>
-                <th className="py-3 px-4">Spoiled Limit</th>
-                <th className="py-3 px-4">Daily Usage</th>
+                <th className="py-3 px-4">Min Stock</th>
+                <th className="py-3 px-4">Shelf Life</th>
+                <th className="py-3 px-4">Used / Day</th>
                 <th className="py-3 px-4">Unit Cost</th>
-                <th className="py-3 px-4">Stock Value</th>
-                <th className="py-3 px-5 text-right">Actions</th>
+                <th className="py-3 px-4">Total Value</th>
+                <th className="py-3 px-5 text-right">Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">

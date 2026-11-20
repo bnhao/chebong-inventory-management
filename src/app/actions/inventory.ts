@@ -39,11 +39,13 @@ export interface UpdateIngredientInput {
 
 function revalidateInventoryRoutes() {
   revalidatePath('/staff/dashboard')
+  revalidatePath('/staff/stock')
   revalidatePath('/staff/restock')
   revalidatePath('/staff/cycle-count')
   revalidatePath('/staff/waste')
   revalidatePath('/staff/groceries')
   revalidatePath('/manager/dashboard')
+  revalidatePath('/manager/close-day')
   revalidatePath('/manager/thresholds')
   revalidatePath('/manager/reports')
   revalidatePath('/manager/groceries')

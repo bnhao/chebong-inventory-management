@@ -8,12 +8,14 @@ import { revalidatePath } from 'next/cache'
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 function revalidateRecipeAndInventoryPaths() {
+  revalidatePath('/manager/close-day')
   revalidatePath('/manager/recipes')
   revalidatePath('/manager/dashboard')
   revalidatePath('/manager/reports')
   revalidatePath('/manager/thresholds')
   revalidatePath('/manager/groceries')
   revalidatePath('/staff/dashboard')
+  revalidatePath('/staff/stock')
   revalidatePath('/staff/groceries')
   revalidatePath('/staff/waste')
   revalidatePath('/staff/cycle-count')
