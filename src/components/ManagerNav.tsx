@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 interface NavItem {
   href: string
   label: string
+  matchPaths: string[]
   icon: (active: boolean) => React.ReactNode
 }
 
@@ -15,6 +16,16 @@ function DashboardIcon(active: boolean) {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
       <path d="M9 21V12h6v9"/>
+    </svg>
+  )
+}
+
+function CloseDayIcon(active: boolean) {
+  const color = active ? '#e85d04' : '#6b7280'
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
     </svg>
   )
 }
@@ -31,7 +42,7 @@ function RecipeIcon(active: boolean) {
   )
 }
 
-function ThresholdIcon(active: boolean) {
+function RulesIcon(active: boolean) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -41,18 +52,7 @@ function ThresholdIcon(active: boolean) {
   )
 }
 
-function GroceriesIcon(active: boolean) {
-  const color = active ? '#e85d04' : '#6b7280'
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="21" r="1"/>
-      <circle cx="20" cy="21" r="1"/>
-      <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.57L23 6H6"/>
-    </svg>
-  )
-}
-
-function ReportIcon(active: boolean) {
+function ActivityIcon(active: boolean) {
   const color = active ? '#e85d04' : '#6b7280'
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -66,11 +66,11 @@ function ReportIcon(active: boolean) {
 }
 
 const navItems: NavItem[] = [
-  { href: '/manager/dashboard', label: 'Dashboard', icon: DashboardIcon },
-  { href: '/manager/recipes', label: 'Recipes & Clover', icon: RecipeIcon },
-  { href: '/manager/thresholds', label: 'Thresholds', icon: ThresholdIcon },
-  { href: '/manager/groceries', label: 'Groceries', icon: GroceriesIcon },
-  { href: '/manager/reports', label: 'Logs & Audits', icon: ReportIcon },
+  { href: '/manager/dashboard', label: 'Today', matchPaths: ['/manager/dashboard'], icon: DashboardIcon },
+  { href: '/manager/close-day', label: 'Close Day', matchPaths: ['/manager/close-day'], icon: CloseDayIcon },
+  { href: '/manager/recipes', label: 'Recipes', matchPaths: ['/manager/recipes'], icon: RecipeIcon },
+  { href: '/manager/thresholds', label: 'Stock Rules', matchPaths: ['/manager/thresholds', '/manager/groceries'], icon: RulesIcon },
+  { href: '/manager/reports', label: 'Activity', matchPaths: ['/manager/reports'], icon: ActivityIcon },
 ]
 
 export default function ManagerNav() {
@@ -80,7 +80,7 @@ export default function ManagerNav() {
     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
       <div className="flex items-center surface-card rounded-2xl p-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/manager/dashboard' && pathname.startsWith(item.href))
+          const isActive = item.matchPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`))
           return (
             <Link
               key={item.href}
@@ -100,15 +100,6 @@ export default function ManagerNav() {
           )
         })}
       </div>
-
-      {/* Manager Profile Avatar */}
-      <div className="w-10 h-10 rounded-full surface-card flex items-center justify-center shrink-0 ml-1 transition-transform duration-200 hover:scale-105">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-      </div>
     </div>
   )
 }
-
