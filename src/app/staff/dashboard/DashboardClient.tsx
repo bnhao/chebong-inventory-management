@@ -3,6 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import {
+  AlertTriangle,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardCheck,
+  Clock,
+  PackagePlus,
+  ShoppingBasket,
+  Trash2,
+} from 'lucide-react'
 import StaffDesktopNav from '@/components/StaffDesktopNav'
 import { submitRestockAction } from '@/app/actions/inventory'
 import { StaffDashboardData } from './page'
@@ -11,51 +23,16 @@ interface Props {
   data: StaffDashboardData
 }
 
-function TrashIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e85d04" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-      <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-    </svg>
-  )
-}
-
-function PlusIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e85d04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  )
-}
-
-function CheckSquareIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 11 12 14 22 4"/>
-      <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-    </svg>
-  )
-}
-
-function UserIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-      <circle cx="12" cy="7" r="4"/>
-    </svg>
-  )
-}
-
 export default function DashboardClient({ data }: Props) {
   const router = useRouter()
 
-  // Alerts compact state
   const [showAllAlerts, setShowAllAlerts] = useState(false)
 
   const lowStockCount = data.alerts.filter((a) => a.type === 'low_stock').length
-  const expiringCount = data.alerts.filter((a) => a.type === 'expiring_soon' || a.type === 'spoiled').length
+  const expiringCount = data.alerts.filter(
+    (a) => a.type === 'expiring_soon' || a.type === 'spoiled'
+  ).length
 
-  // Manual restock form state (for desktop right column & mobile quick restock)
   const [selectedIngredientId, setSelectedIngredientId] = useState('')
   const [quantity, setQuantity] = useState('')
   const [expirationDate, setExpirationDate] = useState('')
@@ -68,7 +45,7 @@ export default function DashboardClient({ data }: Props) {
   async function handleRestockSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedIngredientId || !quantity) {
-      setSubmitError('Please select an ingredient and enter a quantity.')
+      setSubmitError('Select an ingredient and enter a quantity')
       return
     }
 
@@ -104,180 +81,187 @@ export default function DashboardClient({ data }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Subheader: Responsive header with Shift/Date on left and Desktop Nav on right */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Header row */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <p className="text-xs text-[#737373] font-mono tabular-nums">
             {data.headerContext.formattedDate} · {data.headerContext.shiftLabel}
           </p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
-            {data.headerContext.greeting} 👋
+          <h1 className="text-2xl sm:text-[28px] leading-[1.15] font-medium text-[#171717] tracking-[-0.015em] mt-1">
+            Staff dashboard
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Here&apos;s what needs your attention today.</p>
         </div>
-
-        {/* Desktop Navigation (visible on >= md, hidden on mobile) */}
         <StaffDesktopNav />
-
-        {/* Mobile Profile Icon (only visible on mobile) */}
-        <div className="md:hidden self-end -mt-10">
-          <button className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-2xs">
-            <UserIcon />
-          </button>
-        </div>
       </div>
 
-      {/* Friendly status hero: one plain-language summary + one clear next step */}
-      <div
-        className={`enter-fade-up rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-          data.alerts.length === 0
-            ? 'bg-linear-to-br from-green-50 to-emerald-100/60 border border-green-200/80 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8),0_8px_24px_-8px_rgba(22,163,74,0.18)]'
-            : 'surface-accent-warm'
-        }`}
-      >
+      {/* Freshness & restock status summary */}
+      <div className="surface-card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="text-4xl">{data.alerts.length === 0 ? '🎉' : '🛒'}</div>
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+              data.alerts.length === 0
+                ? 'bg-[#f0fdf4] border-[#bbf7d0] text-[#15803d]'
+                : 'bg-[#fff7ed] border-[#fed7aa] text-[#c2410c]'
+            }`}
+          >
+            {data.alerts.length === 0 ? (
+              <CheckCircle2 size={18} strokeWidth={1.5} />
+            ) : (
+              <ShoppingBasket size={18} strokeWidth={1.5} />
+            )}
+          </div>
           <div>
-            <p className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">
+            <p className="text-base font-medium text-[#171717] tabular-nums">
               {data.alerts.length === 0
-                ? "You're all set!"
-                : `${data.alerts.length} ${data.alerts.length === 1 ? 'item needs' : 'items need'} a look`}
+                ? 'All ingredients stocked and fresh'
+                : `${data.alerts.length} ${data.alerts.length === 1 ? 'item needs' : 'items need'} attention`}
             </p>
-            <p className="text-sm text-gray-600 mt-0.5">
+            <p className="text-sm text-[#525252] mt-0.5 tabular-nums">
               {data.alerts.length === 0
-                ? 'Everything is stocked and fresh. Nice work.'
-                : `${lowStockCount} running low · ${expiringCount} expiring soon`}
+                ? 'No items below par or nearing expiration'
+                : `${lowStockCount} low stock · ${expiringCount} expiring or spoiled`}
             </p>
           </div>
         </div>
         <Link
           href={data.alerts.length === 0 ? '/staff/cycle-count' : '/staff/groceries'}
-          className="btn-tactile-primary text-white font-bold text-sm px-5 py-3 rounded-xl text-center shrink-0"
+          className="btn-primary h-10 px-4 rounded-xl text-sm font-medium inline-flex items-center justify-center gap-2 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c] focus-visible:ring-offset-1"
         >
-          {data.alerts.length === 0 ? 'Start today’s count' : 'See what to buy'}
+          <span>{data.alerts.length === 0 ? "Start today's count" : 'Review grocery list'}</span>
+          <ArrowRight size={16} strokeWidth={1.5} />
         </Link>
       </div>
 
-      {/* Responsive Grid: 1 column on mobile, 12-column split on desktop (Figma layout) */}
+      {/* Main 12-col split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column (7 cols on lg:) - ALERTS, QUICK ACTIONS, CYCLE COUNT */}
-        <div className="lg:col-span-7 space-y-6 enter-fade-up stagger-1">
-          {/* ALERTS Section (Compacted to 3 newest with See More option & counter summarized in header) */}
-          <div className="space-y-3">
+        {/* Left Column */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Alerts */}
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  ALERTS
-                </span>
+                <h2 className="text-sm font-medium text-[#171717]">Alerts</h2>
                 {data.alerts.length > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-200 shadow-2xs">
+                  <span className="font-mono text-xs tabular-nums text-[#737373]">
                     {data.alerts.length}
                   </span>
                 )}
               </div>
-              <span className="text-xs text-gray-500 font-medium">
+              <span className="text-xs text-[#737373] font-mono tabular-nums">
                 {data.alerts.length === 0
-                  ? 'All stocked & fresh'
-                  : `${lowStockCount} low stock · ${expiringCount} expiring`}
+                  ? 'Clear'
+                  : `${lowStockCount} low · ${expiringCount} expiry`}
               </span>
             </div>
 
             {data.alerts.length === 0 ? (
-              <div className="bg-linear-to-r from-green-50 to-emerald-50/60 border border-green-200/80 rounded-2xl p-4 flex items-center gap-3 shadow-xs enter-fade-up">
-                <span className="text-xl">✅</span>
+              <div className="surface-card rounded-2xl p-4 flex items-center gap-3">
+                <CheckCircle2 size={18} strokeWidth={1.5} className="text-[#15803d] shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-green-900">All stocked &amp; fresh</p>
-                  <p className="text-xs text-green-700">No ingredients below minimum threshold or nearing expiration.</p>
+                  <p className="text-sm font-medium text-[#171717]">All stocked and fresh</p>
+                  <p className="text-xs text-[#737373] mt-0.5">
+                    No ingredients below threshold or nearing expiration
+                  </p>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {(showAllAlerts ? data.alerts : data.alerts.slice(0, 3)).map((alert) => {
-                  if (alert.type === 'expiring_soon') {
-                    // Yellow Card (Figma style)
-                    return (
-                      <div
-                        key={alert.id}
-                        className="enter-fade-up bg-linear-to-r from-[#fffbeb] via-[#fffbeb] to-[#fef3c7]/50 border border-[#fde68a] rounded-2xl p-4 flex items-start gap-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),0_2px_8px_-2px_rgba(217,119,6,0.1)] transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md"
-                      >
-                        <div className="text-amber-500 text-lg shrink-0 mt-0.5">⚠️</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm sm:text-base font-bold text-[#78350f]">
-                            {alert.message}
-                          </p>
-                          <p className="text-xs text-[#92400e]/85 mt-0.5">
-                            {alert.subMessage || 'Use first · Walk-in fridge, shelf B'}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  }
-
-                  // Red Alert Card (Figma style: with bright red circle indicator)
+                  const isExpiring = alert.type === 'expiring_soon'
                   return (
                     <div
                       key={alert.id}
-                      className="enter-fade-up bg-linear-to-r from-[#fef2f2] via-[#fef2f2] to-[#fee2e2]/45 border border-[#fecaca] rounded-2xl p-4 flex items-start gap-3.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),0_2px_8px_-2px_rgba(220,38,38,0.1)] transition-all duration-200 hover:-translate-y-0.5 hover:border-red-300 hover:shadow-md"
+                      className={`rounded-xl border px-4 py-3 flex items-start justify-between gap-3 ${
+                        isExpiring
+                          ? 'bg-[#fffbeb] border-[#fde68a]'
+                          : 'bg-[#fef2f2] border-[#fecaca]'
+                      }`}
                     >
-                      <div className="w-4 h-4 rounded-full bg-red-600 mt-1 shrink-0 ring-4 ring-red-100 pulse-ring-urgent" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm sm:text-base font-bold text-[#991b1b]">
-                          {alert.message}
-                        </p>
-                        <p className="text-xs sm:text-sm text-[#b91c1c] mt-0.5">
-                          {alert.subMessage}
-                        </p>
+                      <div className="flex items-start gap-3 min-w-0">
+                        {isExpiring ? (
+                          <Clock
+                            size={16}
+                            strokeWidth={1.5}
+                            className="text-[#b45309] mt-0.5 shrink-0"
+                          />
+                        ) : (
+                          <AlertTriangle
+                            size={16}
+                            strokeWidth={1.5}
+                            className="text-[#b91c1c] mt-0.5 shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p
+                            className={`text-sm font-medium ${
+                              isExpiring ? 'text-[#78350f]' : 'text-[#7f1d1d]'
+                            }`}
+                          >
+                            {alert.message}
+                          </p>
+                          <p
+                            className={`text-xs mt-0.5 ${
+                              isExpiring ? 'text-[#92400e]' : 'text-[#991b1b]'
+                            }`}
+                          >
+                            {alert.subMessage || 'Use first · Walk-in fridge'}
+                          </p>
+                        </div>
                       </div>
+                      <span
+                        className={`font-mono text-xs tabular-nums shrink-0 px-2 py-0.5 rounded-md border ${
+                          isExpiring
+                            ? 'bg-white/70 border-[#fde68a] text-[#b45309]'
+                            : 'bg-white/70 border-[#fecaca] text-[#b91c1c]'
+                        }`}
+                      >
+                        {isExpiring ? 'Expiring' : alert.type === 'spoiled' ? 'Spoiled' : 'Low'}
+                      </span>
                     </div>
                   )
                 })}
 
-                {/* See More / Show Less Toggle Button */}
                 {data.alerts.length > 3 && (
                   <button
                     type="button"
                     onClick={() => setShowAllAlerts(!showAllAlerts)}
-                    className="w-full py-2.5 px-4 surface-card-interactive rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 flex items-center justify-center gap-1.5"
+                    className="w-full h-9 px-4 btn-secondary rounded-xl text-xs font-medium flex items-center justify-center gap-1.5"
                   >
                     <span>
                       {showAllAlerts
-                        ? 'Show Less (3 Newest)'
-                        : `See More (${data.alerts.length - 3} more alerts)`}
+                        ? 'Show fewer'
+                        : `Show all alerts (${data.alerts.length - 3} more)`}
                     </span>
-                    <svg
-                      className={`w-3.5 h-3.5 transition-transform duration-200 ${showAllAlerts ? 'rotate-180' : ''}`}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
+                    <ChevronDown
+                      size={14}
+                      strokeWidth={1.5}
+                      className={`transition-transform duration-150 ${
+                        showAllAlerts ? 'rotate-180' : ''
+                      }`}
+                    />
                   </button>
                 )}
               </div>
             )}
-          </div>
+          </section>
 
-          {/* QUICK ACTIONS Section */}
-          <div className="space-y-3">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">
-              QUICK ACTIONS
-            </span>
+          {/* Quick actions */}
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium text-[#171717]">Quick actions</h2>
             <div className="grid grid-cols-3 gap-3">
-              {/* Log Waste */}
               <button
+                type="button"
                 onClick={() => router.push('/staff/waste')}
-                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
+                className="flex flex-col items-start gap-3 p-4 surface-card-interactive rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c]"
               >
-                <div className="w-12 h-12 rounded-xl bg-linear-to-b from-red-50 to-red-100/70 border border-red-200/60 shadow-2xs flex items-center justify-center text-red-500 mb-2 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-200">
-                  <TrashIcon />
+                <div className="w-9 h-9 rounded-lg bg-[#f4f4f5] border border-neutral-900/[0.06] flex items-center justify-center text-[#525252]">
+                  <Trash2 size={16} strokeWidth={1.5} />
                 </div>
-                <span className="text-xs font-bold text-gray-800">Log Waste</span>
+                <span className="text-sm font-medium text-[#171717]">Log waste</span>
               </button>
 
-              {/* Manual Restock */}
               <button
+                type="button"
                 onClick={() => {
                   const el = document.getElementById('staff-restock-panel')
                   if (el && window.innerWidth >= 1024) {
@@ -286,140 +270,138 @@ export default function DashboardClient({ data }: Props) {
                     router.push('/staff/restock')
                   }
                 }}
-                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
+                className="flex flex-col items-start gap-3 p-4 surface-card-interactive rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c]"
               >
-                <div className="w-12 h-12 rounded-xl bg-linear-to-b from-orange-50 to-orange-100/70 border border-orange-200/60 shadow-2xs flex items-center justify-center text-[#e85d04] mb-2 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-200">
-                  <PlusIcon />
+                <div className="w-9 h-9 rounded-lg bg-[#f4f4f5] border border-neutral-900/[0.06] flex items-center justify-center text-[#525252]">
+                  <PackagePlus size={16} strokeWidth={1.5} />
                 </div>
-                <span className="text-xs font-bold text-gray-800">Manual Restock</span>
+                <span className="text-sm font-medium text-[#171717]">Manual restock</span>
               </button>
 
-              {/* Perform Cycle Count */}
               <button
+                type="button"
                 onClick={() => router.push('/staff/cycle-count')}
-                className="flex flex-col items-center justify-center p-4 surface-card-interactive rounded-2xl group"
+                className="flex flex-col items-start gap-3 p-4 surface-card-interactive rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c]"
               >
-                <div className="w-12 h-12 rounded-xl bg-linear-to-b from-green-50 to-green-100/70 border border-green-200/60 shadow-2xs flex items-center justify-center text-[#2e7d32] mb-2 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-200">
-                  <CheckSquareIcon />
+                <div className="w-9 h-9 rounded-lg bg-[#f4f4f5] border border-neutral-900/[0.06] flex items-center justify-center text-[#525252]">
+                  <ClipboardCheck size={16} strokeWidth={1.5} />
                 </div>
-                <span className="text-xs font-bold text-gray-800 text-center">Perform Cycle Count</span>
+                <span className="text-sm font-medium text-[#171717]">Cycle count</span>
               </button>
             </div>
-          </div>
+          </section>
 
-          {/* CYCLE COUNT Section (Daily Reset & Risk-Prioritized) */}
-          <div className="surface-card rounded-2xl p-5 space-y-4">
+          {/* Today's Cycle Count */}
+          <section className="surface-card rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-gray-900">Today&apos;s Cycle Count</h3>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#2e7d32] border border-emerald-200/70">
-                  {data.cycleCountSummary.countedCount} / {data.cycleCountSummary.totalCount} counted
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-base font-medium text-[#171717]">Today&apos;s cycle count</h2>
+                <span className="batch-stamp">
+                  {data.cycleCountSummary.countedCount} / {data.cycleCountSummary.totalCount}
                 </span>
               </div>
               <Link
                 href="/staff/cycle-count"
-                className="text-xs font-semibold text-[#e85d04] hover:underline inline-flex items-center gap-1 group shrink-0"
+                className="text-xs font-medium text-[#c2410c] hover:text-[#9a3412] inline-flex items-center gap-1 shrink-0"
               >
-                <span>Start Audit</span>
-                <span className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+                <span>Start audit</span>
+                <ArrowRight size={14} strokeWidth={1.5} />
               </Link>
             </div>
 
-            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-[#f4f4f5] rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-[#2e7d32] h-2 rounded-full transition-all duration-300"
+                className="bg-[#15803d] h-1.5 rounded-full transition-[width] duration-300"
                 style={{ width: `${data.cycleCountSummary.progressPct}%` }}
               />
             </div>
 
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-neutral-900/[0.06]">
               {data.cycleCountSummary.items.map((item) => (
-                <div key={item.ingredientId} className="py-3 px-2 -mx-2 rounded-xl hover:bg-gray-50/80 transition-colors flex items-center justify-between gap-2 first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm font-semibold text-gray-800 truncate">{item.name}</span>
+                <div
+                  key={item.ingredientId}
+                  className="py-3 flex items-center justify-between gap-3 first:pt-1 last:pb-0"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        item.status === 'counted'
+                          ? 'bg-[#15803d]'
+                          : item.priorityReason === 'critical'
+                          ? 'bg-[#b91c1c]'
+                          : item.priorityReason === 'warning'
+                          ? 'bg-[#b45309]'
+                          : 'bg-[#a3a3a3]'
+                      }`}
+                    />
+                    <span className="text-sm text-[#171717] truncate">{item.name}</span>
                     {item.status === 'pending' && item.priorityReason === 'critical' && (
-                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 shrink-0">
-                        Critical
-                      </span>
+                      <span className="text-xs text-[#b91c1c] shrink-0">Critical</span>
                     )}
                     {item.status === 'pending' && item.priorityReason === 'warning' && (
-                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                        At Risk
-                      </span>
+                      <span className="text-xs text-[#b45309] shrink-0">At risk</span>
                     )}
                     {item.status === 'pending' && item.priorityReason === 'high_value' && (
-                      <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
-                        High Value
-                      </span>
+                      <span className="text-xs text-[#737373] shrink-0">High value</span>
                     )}
                   </div>
                   {item.status === 'counted' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-[#2e7d32] border border-green-200/70 shadow-2xs shrink-0">
-                      Counted · {item.countedQty} {item.unit}
+                    <span className="font-mono text-xs tabular-nums text-[#15803d] shrink-0">
+                      {item.countedQty} {item.unit}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100/90 text-gray-500 border border-gray-200/60 shrink-0">
-                      Pending
-                    </span>
+                    <span className="font-mono text-xs text-[#737373] shrink-0">Pending</span>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Right Column (5 cols on lg:) - Manual Restock Card (Figma exact match) */}
-        <div id="staff-restock-panel" className="lg:col-span-5 space-y-6 enter-fade-up stagger-2">
-          <div className="surface-card rounded-2xl p-5 sm:p-6 space-y-5">
+        {/* Right Column: Manual Restock */}
+        <div id="staff-restock-panel" className="lg:col-span-5">
+          <div className="surface-card rounded-2xl p-6 space-y-5">
             <div>
-              <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">Manual Restock</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Log a delivery as it arrives.</p>
+              <h2 className="text-base font-medium text-[#171717]">Manual restock</h2>
+              <p className="text-xs text-[#737373] mt-0.5">Log a delivery as it arrives</p>
             </div>
 
             {submitSuccess && (
-              <div className="enter-fade-up p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-xs font-medium flex items-center gap-2 shadow-2xs">
-                <span>✓</span> Restock logged successfully into system!
+              <div className="p-3 bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl text-[#15803d] text-xs font-medium flex items-center gap-2">
+                <Check size={14} strokeWidth={1.5} />
+                <span>Restock logged</span>
               </div>
             )}
 
             {submitError && (
-              <div className="enter-fade-up p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium shadow-2xs">
+              <div className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-xl text-[#b91c1c] text-xs font-medium">
                 {submitError}
               </div>
             )}
 
             <form onSubmit={handleRestockSubmit} className="space-y-4">
-              {/* Ingredient Name */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Ingredient Name
+                <label className="block text-xs font-medium text-[#525252]">
+                  Ingredient
                 </label>
-                <div className="relative">
-                  <select
-                    value={selectedIngredientId}
-                    onChange={(e) => setSelectedIngredientId(e.target.value)}
-                    className="w-full appearance-none bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent pr-10 shadow-2xs transition-colors"
-                    required
-                  >
-                    <option value="">Select ingredient...</option>
-                    {data.ingredients.map((ing) => (
-                      <option key={ing.id} value={ing.id}>
-                        {ing.name} ({ing.unit})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </div>
-                </div>
+                <select
+                  value={selectedIngredientId}
+                  onChange={(e) => setSelectedIngredientId(e.target.value)}
+                  className="w-full h-10 bg-white border border-neutral-900/[0.14] hover:border-neutral-900/[0.24] rounded-xl px-3 text-sm text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c] focus:border-transparent transition-colors"
+                  required
+                >
+                  <option value="">Select ingredient</option>
+                  {data.ingredients.map((ing) => (
+                    <option key={ing.id} value={ing.id}>
+                      {ing.name} ({ing.unit})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Quantity Received */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Quantity Received {selectedIngredient && `(${selectedIngredient.unit})`}
+                <label className="block text-xs font-medium text-[#525252]">
+                  Quantity received{selectedIngredient ? ` (${selectedIngredient.unit})` : ''}
                 </label>
                 <input
                   type="number"
@@ -428,36 +410,34 @@ export default function DashboardClient({ data }: Props) {
                   placeholder="0"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs transition-colors"
+                  className="w-full h-10 bg-white border border-neutral-900/[0.14] hover:border-neutral-900/[0.24] rounded-xl px-3 text-sm font-mono tabular-nums text-[#171717] placeholder-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#c2410c] focus:border-transparent transition-colors"
                   required
                 />
               </div>
 
-              {/* Expiration / Batch Date */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Expiration / Batch Date
+                <label className="block text-xs font-medium text-[#525252]">
+                  Expiration date
                 </label>
                 <input
                   type="date"
                   value={expirationDate}
                   onChange={(e) => setExpirationDate(e.target.value)}
-                  className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent shadow-2xs transition-colors"
+                  className="w-full h-10 bg-white border border-neutral-900/[0.14] hover:border-neutral-900/[0.24] rounded-xl px-3 text-sm font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c] focus:border-transparent transition-colors"
                 />
-                <p className="text-[11px] text-gray-400">
+                <p className="text-xs text-[#737373]">
                   {selectedIngredient
-                    ? `Defaults to +${selectedIngredient.spoiled_time_limit_days} days (${selectedIngredient.name} shelf life) if left blank.`
-                    : 'Enforces spoiled time limit and automated warnings.'}
+                    ? `Defaults to +${selectedIngredient.spoiled_time_limit_days} days (${selectedIngredient.name} shelf life)`
+                    : 'Defaults to ingredient shelf life if left blank'}
                 </p>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full btn-tactile-primary text-white font-bold py-3.5 rounded-xl text-sm disabled:opacity-50"
+                className="w-full h-10 btn-primary rounded-xl text-sm font-medium disabled:opacity-50"
               >
-                {isSubmitting ? 'Submitting Restock...' : 'Submit Restock'}
+                {isSubmitting ? 'Submitting…' : 'Submit restock'}
               </button>
             </form>
           </div>

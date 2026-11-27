@@ -3,6 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  AlertTriangle,
+  ArrowRight,
+  Camera,
+  Check,
+  Pencil,
+  Plus,
+  Search,
+  X,
+} from 'lucide-react'
+import {
   checkEodSalesCommittedAction,
   commitEodSalesAction,
   CommitEodSalesResult,
@@ -58,27 +68,27 @@ const MAX_SCAN_PHOTO_BYTES = 10 * 1024 * 1024
 function ConfidenceBadge({ confidence }: { confidence: ScannedLineConfidence }) {
   if (confidence === 'high') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <span className="font-mono text-xs text-[#15803d] bg-[#f0fdf4] border border-[#bbf7d0] px-2 py-0.5 rounded-md">
         High
       </span>
     )
   }
   if (confidence === 'medium') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+      <span className="font-mono text-xs text-[#b45309] bg-[#fffbeb] border border-[#fde68a] px-2 py-0.5 rounded-md">
         Medium
       </span>
     )
   }
   if (confidence === 'low') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
+      <span className="font-mono text-xs text-[#c2410c] bg-[#fff7ed] border border-[#fed7aa] px-2 py-0.5 rounded-md">
         Low
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+    <span className="font-mono text-xs text-[#b91c1c] bg-[#fef2f2] border border-[#fecaca] px-2 py-0.5 rounded-md">
       Unmatched
     </span>
   )
@@ -93,7 +103,9 @@ export default function RecipesClient({
   const storeTimeZone = getStoreTimezone()
 
   const [cloverItems, setCloverItems] = useState<CloverItem[]>(initialCloverItems)
-  const [selectedItemForRecipe, setSelectedItemForRecipe] = useState<CloverItem | null>(null)
+  const [selectedItemForRecipe, setSelectedItemForRecipe] = useState<CloverItem | null>(
+    null
+  )
 
   useEffect(() => {
     setCloverItems(initialCloverItems)
@@ -102,12 +114,10 @@ export default function RecipesClient({
     )
   }, [initialCloverItems])
 
-  // Menu Filtering & Search state
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [mappingFilter, setMappingFilter] = useState<'ALL' | 'UNMAPPED' | 'MAPPED'>('ALL')
 
-  // New Clover Item Modal state
   const [showAddItemModal, setShowAddItemModal] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [newItemCloverId, setNewItemCloverId] = useState('')
@@ -116,13 +126,11 @@ export default function RecipesClient({
   const [isSavingItem, setIsSavingItem] = useState(false)
   const [itemModalError, setItemModalError] = useState('')
 
-  // Recipe editing state inside modal
   const [selectedIngredientToAdd, setSelectedIngredientToAdd] = useState('')
   const [qtyToAdd, setQtyToAdd] = useState('')
   const [isAddingIngredient, setIsAddingIngredient] = useState(false)
   const [recipeModalError, setRecipeModalError] = useState('')
 
-  // EOD Sales & Deficit Calculator State
   const [businessDate, setBusinessDate] = useState<string>(defaultBusinessDate)
   const [eodStatus, setEodStatus] = useState<EodCommittedStatus | null>(null)
   const [checkingEodStatus, setCheckingEodStatus] = useState(false)
@@ -133,7 +141,6 @@ export default function RecipesClient({
   const [commitResult, setCommitResult] = useState<CommitEodSalesResult | null>(null)
   const [salesErrorMsg, setSalesErrorMsg] = useState('')
 
-  // Gemini EOD Sales Report Photo Scanner State
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [scanPhotos, setScanPhotos] = useState<SelectedPhoto[]>([])
   const [isScanningReport, setIsScanningReport] = useState(false)
@@ -144,7 +151,6 @@ export default function RecipesClient({
   const [scanAppliedMsg, setScanAppliedMsg] = useState('')
   const depletionSectionRef = useRef<HTMLDivElement | null>(null)
 
-  // Revoke object URLs on unmount
   const scanPhotosRef = useRef<SelectedPhoto[]>([])
   useEffect(() => {
     scanPhotosRef.current = scanPhotos
@@ -158,7 +164,6 @@ export default function RecipesClient({
     }
   }, [])
 
-  // Check if businessDate already has EOD sales committed
   useEffect(() => {
     let cancelled = false
     setAllowSupplemental(false)
@@ -179,12 +184,9 @@ export default function RecipesClient({
     }
   }, [businessDate])
 
-  // Filtered Clover Items for Menu & Recipe Mapping
   const filteredCloverItems = useMemo(() => {
     return cloverItems.filter((item) => {
-      if (selectedCategory !== 'All' && item.category !== selectedCategory) {
-        return false
-      }
+      if (selectedCategory !== 'All' && item.category !== selectedCategory) return false
       const hasIngredients = item.recipe_ingredients && item.recipe_ingredients.length > 0
       if (mappingFilter === 'MAPPED' && !hasIngredients) return false
       if (mappingFilter === 'UNMAPPED' && hasIngredients) return false
@@ -199,7 +201,6 @@ export default function RecipesClient({
     })
   }, [cloverItems, selectedCategory, mappingFilter, searchQuery])
 
-  // Compute live ingredient deficits & unmapped sold items
   const {
     deductions: deficitAnalysis,
     unmappedSoldItems,
@@ -212,7 +213,6 @@ export default function RecipesClient({
     return new Map(cloverItems.map((item) => [item.id, item]))
   }, [cloverItems])
 
-  // Create new Clover Item via Server Action
   async function handleCreateCloverItem(e: React.FormEvent) {
     e.preventDefault()
     if (!newItemName.trim()) return
@@ -243,7 +243,6 @@ export default function RecipesClient({
     }
   }
 
-  // Add Ingredient to Active Recipe via Server Action
   async function handleAddIngredientToRecipe(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedItemForRecipe || !selectedIngredientToAdd || !qtyToAdd) return
@@ -289,7 +288,6 @@ export default function RecipesClient({
     }
   }
 
-  // Remove Ingredient from Recipe via Server Action
   async function handleRemoveIngredient(recipeIngredientId: string) {
     if (!selectedItemForRecipe) return
     setRecipeModalError('')
@@ -317,7 +315,6 @@ export default function RecipesClient({
     router.refresh()
   }
 
-  // Photo picker handlers
   function handlePhotosSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(e.target.files || [])
     e.target.value = ''
@@ -328,11 +325,11 @@ export default function RecipesClient({
 
     for (const file of chosen) {
       if (nextPhotos.length >= MAX_SCAN_PHOTOS) {
-        setScanError(`Maximum of ${MAX_SCAN_PHOTOS} photos allowed per scan.`)
+        setScanError(`Maximum of ${MAX_SCAN_PHOTOS} photos allowed per scan`)
         break
       }
       if (file.size > MAX_SCAN_PHOTO_BYTES) {
-        setScanError(`"${file.name}" exceeds the 10 MB per-photo limit.`)
+        setScanError(`"${file.name}" exceeds the 10 MB per-photo limit`)
         continue
       }
       nextPhotos.push({
@@ -367,7 +364,7 @@ export default function RecipesClient({
 
   async function handleScanReport() {
     if (scanPhotos.length === 0) {
-      setScanError('Select or snap at least 1 photo of your Clover EOD sales report.')
+      setScanError('Select at least one photo of your Clover EOD report')
       return
     }
 
@@ -394,7 +391,7 @@ export default function RecipesClient({
       }
 
       if (!response.ok) {
-        setScanError(body.error || 'Failed to scan sales report.')
+        setScanError(body.error || 'Failed to scan sales report')
         return
       }
 
@@ -407,7 +404,7 @@ export default function RecipesClient({
         setDetectedReportDate(null)
       }
     } catch (err: unknown) {
-      setScanError(err instanceof Error ? err.message : 'Network error scanning sales report')
+      setScanError(err instanceof Error ? err.message : 'Network error scanning report')
     } finally {
       setIsScanningReport(false)
     }
@@ -465,7 +462,7 @@ export default function RecipesClient({
     }
 
     if (appliedLines === 0) {
-      setScanError('Match at least one scanned line with a quantity > 0 to apply.')
+      setScanError('Match at least one scanned line with a quantity greater than 0')
       return
     }
 
@@ -474,13 +471,12 @@ export default function RecipesClient({
     setCommitResult(null)
     setSalesErrorMsg('')
     setScanAppliedMsg(
-      `Applied ${appliedLines} scanned line(s) (${Math.round(appliedUnits * 100) / 100} total items) to EOD Sales below.`
+      `Applied ${appliedLines} scanned line(s) (${Math.round(appliedUnits * 100) / 100} total items) below`
     )
 
     depletionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }
 
-  // Atomic EOD Sales Commit via Server Action
   async function handleCommitSalesDeduction() {
     if (totalItemsSold === 0) return
     if (eodStatus?.alreadyCommitted && !allowSupplemental) return
@@ -526,16 +522,16 @@ export default function RecipesClient({
   ).length
 
   return (
-    <div className="space-y-8">
-      {/* Top Controls & Header */}
-      <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs space-y-4">
+    <div className="space-y-6">
+      {/* Menu & Recipe Mapping Header */}
+      <div className="surface-card p-5 rounded-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
-              Official Chè Bông Menu &amp; Clover POS Recipe Mapping
+            <h2 className="text-base font-medium text-[#171717]">
+              Chè Bông menu and Clover recipe mapping
             </h2>
-            <p className="text-xs text-gray-500 mt-1 max-w-2xl">
-              All {cloverItems.length} menu items ready for End-of-Day sales deductions. Click <strong>Edit Recipe</strong> on any item to map raw ingredients or hand-cooked jellies per serving.
+            <p className="text-xs text-[#737373] mt-0.5">
+              {cloverItems.length} menu items mapped to raw ingredients and in-house jellies per serving
             </p>
           </div>
 
@@ -545,14 +541,15 @@ export default function RecipesClient({
               setItemModalError('')
               setShowAddItemModal(true)
             }}
-            className="inline-flex items-center gap-2 bg-[#e85d04] hover:bg-[#d45203] text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-98 shrink-0"
+            className="h-9 px-4 btn-primary rounded-xl text-xs font-medium inline-flex items-center gap-1.5 shrink-0"
           >
-            <span>＋</span> Add Clover Item
+            <Plus size={15} strokeWidth={1.5} />
+            <span>Add Clover item</span>
           </button>
         </div>
 
-        {/* Category Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+        {/* Category tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {MENU_CATEGORIES.map((cat) => {
             const isActive = selectedCategory === cat
             const count =
@@ -564,16 +561,16 @@ export default function RecipesClient({
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
                   isActive
-                    ? 'bg-gray-900 text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
+                    ? 'bg-[#171717] text-white'
+                    : 'bg-[#f4f4f5] text-[#525252] hover:text-[#171717]'
                 }`}
               >
                 <span>{cat}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-white text-gray-600'
+                  className={`font-mono text-xs tabular-nums ${
+                    isActive ? 'text-white/70' : 'text-[#737373]'
                   }`}
                 >
                   {count}
@@ -583,43 +580,49 @@ export default function RecipesClient({
           })}
         </div>
 
-        {/* Search & Mapping Filter Bar */}
+        {/* Search & mapping filter */}
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
+            <Search
+              size={15}
+              strokeWidth={1.5}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]"
+            />
             <input
               type="text"
-              placeholder="Search menu item (e.g. Chè Thai, Matcha, B1, CHE-1A)..."
+              placeholder="Search menu items"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+              className="w-full h-9 bg-white border border-neutral-900/[0.14] rounded-xl pl-9 pr-8 text-xs text-[#171717] placeholder-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2 text-xs text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#737373] hover:text-[#171717]"
               >
-                ✕
+                <X size={14} strokeWidth={1.5} />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+          <div className="flex items-center bg-[#f4f4f5] rounded-xl p-1 text-xs w-full sm:w-auto">
             {(['ALL', 'UNMAPPED', 'MAPPED'] as const).map((status) => (
               <button
                 key={status}
                 type="button"
                 onClick={() => setMappingFilter(status)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                className={`h-7 flex-1 sm:flex-initial px-3 rounded-lg font-medium transition-colors ${
                   mappingFilter === status
-                    ? 'bg-orange-50 text-[#e85d04] border-orange-200'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-white text-[#171717] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+                    : 'text-[#525252] hover:text-[#171717]'
                 }`}
               >
                 {status === 'ALL'
-                  ? 'All Items'
+                  ? 'All'
                   : status === 'UNMAPPED'
-                  ? 'Needs Recipe'
+                  ? 'Needs recipe'
                   : 'Mapped'}
               </button>
             ))}
@@ -627,54 +630,38 @@ export default function RecipesClient({
         </div>
       </div>
 
-      {/* MOBILE CARD VIEW */}
+      {/* Mobile card view */}
       <div className="block md:hidden space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            Menu Items ({filteredCloverItems.length})
-          </h3>
-          <span className="text-[11px] text-gray-400">Mobile View</span>
+          <span className="text-xs font-medium text-[#525252]">
+            Menu items ({filteredCloverItems.length})
+          </span>
         </div>
         {filteredCloverItems.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 space-y-3"
-          >
-            <div className="flex items-start justify-between">
+          <div key={item.id} className="surface-card rounded-2xl p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
               <div>
-                <h4 className="font-extrabold text-gray-900 text-sm">{item.name}</h4>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  ID: <span className="font-mono font-semibold text-gray-600">{item.clover_id || 'N/A'}</span> · {item.category}
+                <h4 className="font-medium text-[#171717] text-sm">{item.name}</h4>
+                <p className="text-xs text-[#737373] font-mono mt-0.5">
+                  {item.clover_id || '—'} · {item.category}
                 </p>
               </div>
-              <span className="text-sm font-extrabold text-gray-900">
+              <span className="text-sm font-mono tabular-nums font-medium text-[#171717]">
                 ${item.price.toFixed(2)}
               </span>
             </div>
 
-            <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
-                Recipe Ingredients
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {item.recipe_ingredients && item.recipe_ingredients.length > 0 ? (
-                  item.recipe_ingredients.map((rec) => {
-                    const ingName = rec.ingredient?.name || 'Item'
-                    const unit = rec.ingredient?.unit || ''
-                    return (
-                      <span
-                        key={rec.id}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-orange-800 border border-orange-200/60 px-2 py-0.5 rounded-md"
-                      >
-                        <span>{ingName}:</span>
-                        <strong className="font-bold">{rec.quantity_required} {unit}</strong>
-                      </span>
-                    )
-                  })
-                ) : (
-                  <span className="text-xs text-gray-400 italic">No ingredients mapped yet</span>
-                )}
-              </div>
+            <div className="flex flex-wrap gap-1.5">
+              {item.recipe_ingredients && item.recipe_ingredients.length > 0 ? (
+                item.recipe_ingredients.map((rec) => (
+                  <span key={rec.id} className="batch-stamp">
+                    {rec.ingredient?.name || 'Item'}: {rec.quantity_required}{' '}
+                    {rec.ingredient?.unit || ''}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-[#737373]">No recipe mapped</span>
+              )}
             </div>
 
             <button
@@ -683,93 +670,72 @@ export default function RecipesClient({
                 setRecipeModalError('')
                 setSelectedItemForRecipe(item)
               }}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-orange-200 bg-orange-50/70 text-[#e85d04] hover:bg-orange-100 font-bold text-xs transition-all active:scale-98"
+              className="w-full h-9 btn-secondary rounded-xl text-xs font-medium inline-flex items-center justify-center gap-1.5"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9"/>
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-              </svg>
-              Edit Recipe
+              <Pencil size={13} strokeWidth={1.5} />
+              <span>Edit recipe</span>
             </button>
           </div>
         ))}
       </div>
 
-      {/* Wide Desktop Data Table */}
-      <div className="hidden md:block bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
-            Active Menu Items ({filteredCloverItems.length} of {cloverItems.length})
+      {/* Desktop table */}
+      <div className="hidden md:block surface-card rounded-2xl overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-neutral-900/[0.08] flex items-center justify-between">
+          <h3 className="text-sm font-medium text-[#171717]">
+            Menu items ({filteredCloverItems.length} of {cloverItems.length})
           </h3>
-          <span className="text-xs text-gray-400 font-medium">Clover EOD &amp; Webhook Ready</span>
+          <span className="text-xs text-[#737373]">Clover EOD ready</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/70 text-gray-600 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
-                <th className="py-3 px-5">Item Name</th>
-                <th className="py-3 px-4">Clover ID</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Price</th>
-                <th className="py-3 px-5">Mapped Recipe Ingredients</th>
-                <th className="py-3 px-5 text-right">Actions</th>
+              <tr className="bg-[#fafafa] text-[#737373] text-xs font-medium border-b border-neutral-900/[0.08]">
+                <th className="py-3 px-5 font-medium">Item</th>
+                <th className="py-3 px-4 font-medium">Clover ID</th>
+                <th className="py-3 px-4 font-medium">Category</th>
+                <th className="py-3 px-4 font-medium text-right">Price</th>
+                <th className="py-3 px-5 font-medium">Mapped ingredients</th>
+                <th className="py-3 px-5 font-medium text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-neutral-900/[0.06] text-sm">
               {filteredCloverItems.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="py-3.5 px-5 font-bold text-gray-900">
-                    {item.name}
+                <tr key={item.id} className="hover:bg-[#fafafa] transition-colors">
+                  <td className="py-3 px-5 font-medium text-[#171717]">{item.name}</td>
+                  <td className="py-3 px-4">
+                    <span className="batch-stamp">{item.clover_id || '—'}</span>
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-xs text-gray-500">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded-md font-semibold text-gray-700">
-                      {item.clover_id || 'N/A'}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-xs font-semibold text-gray-600">
-                    {item.category}
-                  </td>
-                  <td className="py-3.5 px-4 font-bold text-gray-800">
+                  <td className="py-3 px-4 text-xs text-[#525252]">{item.category}</td>
+                  <td className="py-3 px-4 text-right font-mono tabular-nums text-[#171717]">
                     ${item.price.toFixed(2)}
                   </td>
-                  <td className="py-3.5 px-5">
+                  <td className="py-3 px-5">
                     <div className="flex flex-wrap gap-1.5 max-w-md">
                       {item.recipe_ingredients && item.recipe_ingredients.length > 0 ? (
-                        item.recipe_ingredients.map((rec) => {
-                          const ingName = rec.ingredient?.name || 'Item'
-                          const unit = rec.ingredient?.unit || ''
-                          return (
-                            <span
-                              key={rec.id}
-                              className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-orange-800 border border-orange-200/60 px-2 py-0.5 rounded-md"
-                            >
-                              <span>{ingName}:</span>
-                              <strong className="font-bold">{rec.quantity_required} {unit}</strong>
-                            </span>
-                          )
-                        })
+                        item.recipe_ingredients.map((rec) => (
+                          <span key={rec.id} className="batch-stamp">
+                            {rec.ingredient?.name || 'Item'}: {rec.quantity_required}{' '}
+                            {rec.ingredient?.unit || ''}
+                          </span>
+                        ))
                       ) : (
-                        <span className="text-xs text-gray-400 italic">
-                          No ingredients mapped yet
-                        </span>
+                        <span className="text-xs text-[#737373]">No recipe mapped</span>
                       )}
                     </div>
                   </td>
-                  <td className="py-3.5 px-5 text-right">
+                  <td className="py-3 px-5 text-right">
                     <button
                       type="button"
                       onClick={() => {
                         setRecipeModalError('')
                         setSelectedItemForRecipe(item)
                       }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#e85d04] hover:text-[#c44f04] bg-orange-50/70 hover:bg-orange-100 border border-orange-200/80 px-3 py-1.5 rounded-xl transition-all"
+                      className="h-8 px-3 btn-secondary rounded-lg text-xs font-medium inline-flex items-center gap-1.5"
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 20h9"/>
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                      </svg>
-                      Edit Recipe
+                      <Pencil size={13} strokeWidth={1.5} />
+                      <span>Edit</span>
                     </button>
                   </td>
                 </tr>
@@ -779,94 +745,101 @@ export default function RecipesClient({
         </div>
       </div>
 
-      {/* End-of-Day Clover Sales Report Scanner + Atomic Depletion Engine */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 sm:p-6 space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+      {/* End-of-day Clover sales & stock deduction */}
+      <section className="surface-card rounded-2xl p-6 space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-900/[0.08] pb-4">
           <div>
-            <h3 className="text-lg font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
-              <span>⚡</span> Clover End-of-Day Sales &amp; Stock Deduction
+            <h3 className="text-base font-medium text-[#171717]">
+              Clover end-of-day sales and stock deduction
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Snap photos of your printed/screen Clover EOD Item Sales report or enter item counts directly to deduct raw ingredients atomically.
+            <p className="text-xs text-[#737373] mt-0.5">
+              Scan a Clover EOD sales report or enter counts manually to deduct raw ingredients
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                Business Date
-              </label>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <label className="block text-xs text-[#737373]">Business date</label>
               <input
                 type="date"
                 value={businessDate}
                 onChange={(e) => setBusinessDate(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                className="h-9 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-xs font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
               />
             </div>
 
             {totalItemsSold > 0 && (
-              <div className="self-end">
-                <button
-                  type="button"
-                  onClick={handleCommitSalesDeduction}
-                  disabled={
-                    isCommittingSales ||
-                    deficitAnalysis.length === 0 ||
-                    (Boolean(eodStatus?.alreadyCommitted) && !allowSupplemental)
-                  }
-                  className="bg-[#2e7d32] hover:bg-[#256829] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                >
-                  {isCommittingSales
-                    ? 'Committing Atomic Deduction...'
-                    : `Commit EOD Sales (${businessDate})`}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleCommitSalesDeduction}
+                disabled={
+                  isCommittingSales ||
+                  deficitAnalysis.length === 0 ||
+                  (Boolean(eodStatus?.alreadyCommitted) && !allowSupplemental)
+                }
+                className="h-9 px-4 btn-primary rounded-xl text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              >
+                {isCommittingSales
+                  ? 'Committing…'
+                  : `Commit EOD sales (${businessDate})`}
+              </button>
             )}
           </div>
         </div>
 
-        {/* Duplicate Business Date Warning */}
         {checkingEodStatus ? (
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500">
-            Checking commit history for {businessDate}...
+          <div className="p-3 bg-[#fafafa] border border-neutral-900/[0.08] rounded-xl text-xs text-[#737373]">
+            Checking commit history for {businessDate}…
           </div>
         ) : eodStatus?.alreadyCommitted ? (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-2.5">
+          <div className="p-4 bg-[#fffbeb] border border-[#fde68a] rounded-xl space-y-2.5">
             <div className="flex items-start gap-2.5">
-              <span className="text-base leading-none mt-0.5">⚠️</span>
-              <div className="space-y-1 text-xs text-amber-900">
-                <p className="font-bold">
-                  EOD sales already committed for {businessDate} ({eodStatus.existingCount} ingredient deduction log{eodStatus.existingCount === 1 ? '' : 's'})
+              <AlertTriangle
+                size={16}
+                strokeWidth={1.5}
+                className="text-[#b45309] mt-0.5 shrink-0"
+              />
+              <div className="space-y-1 text-xs text-[#78350f]">
+                <p className="font-medium">
+                  EOD sales already committed for {businessDate} ({eodStatus.existingCount}{' '}
+                  deduction log{eodStatus.existingCount === 1 ? '' : 's'})
                 </p>
                 {eodStatus.lastCommittedAt && (
-                  <p className="text-amber-800/90">
-                    Last committed: {formatStoreTimestamp(eodStatus.lastCommittedAt, storeTimeZone)} ({eodStatus.referenceIds.join(', ')})
+                  <p className="text-[#92400e] font-mono tabular-nums">
+                    Last committed:{' '}
+                    {formatStoreTimestamp(eodStatus.lastCommittedAt, storeTimeZone)} (
+                    {eodStatus.referenceIds.join(', ')})
                   </p>
                 )}
               </div>
             </div>
-            <label className="inline-flex items-center gap-2 text-xs font-bold text-amber-950 cursor-pointer pl-6">
+            <label className="inline-flex items-center gap-2 text-xs font-medium text-[#78350f] cursor-pointer pl-6">
               <input
                 type="checkbox"
                 checked={allowSupplemental}
                 onChange={(e) => setAllowSupplemental(e.target.checked)}
-                className="rounded border-amber-400 text-[#e85d04] focus:ring-[#e85d04]"
+                className="rounded border-[#fde68a] text-[#c2410c] focus:ring-[#c2410c]"
               />
-              <span>Commit as supplemental batch for {businessDate} (skip duplicate block)</span>
+              <span>Commit as supplemental batch for {businessDate}</span>
             </label>
           </div>
         ) : null}
 
-        {/* Gemini Vision Photo / Screenshot Scanner */}
-        <div className="bg-orange-50/40 border border-orange-200/80 rounded-2xl p-4 sm:p-5 space-y-4">
+        {/* Photo scanner */}
+        <div className="bg-[#fafafa] border border-neutral-900/[0.08] rounded-xl p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h4 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
-                <span>📷</span> Scan Clover EOD Report (Photo / Screenshot)
-              </h4>
-              <p className="text-xs text-gray-600 mt-0.5">
-                Upload 1–6 photos of a receipt or register screen. Gemini AI extracts sold quantities and matches them to your 43 menu items for review.
-              </p>
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-white border border-neutral-900/[0.08] flex items-center justify-center text-[#525252] shrink-0">
+                <Camera size={16} strokeWidth={1.5} />
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-[#171717]">
+                  Scan Clover EOD report
+                </h4>
+                <p className="text-xs text-[#737373] mt-0.5">
+                  Upload 1–6 photos of a receipt or register screen to extract sold counts for review
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -881,9 +854,10 @@ export default function RecipesClient({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3.5 py-2 rounded-xl bg-white hover:bg-gray-50 border border-orange-200 text-xs font-bold text-[#e85d04] shadow-2xs transition-all"
+                className="h-9 px-3 btn-secondary rounded-xl text-xs font-medium inline-flex items-center gap-1.5"
               >
-                + Add Photo(s)
+                <Plus size={14} strokeWidth={1.5} />
+                <span>Add photos</span>
               </button>
 
               {scanPhotos.length > 0 && (
@@ -892,16 +866,16 @@ export default function RecipesClient({
                     type="button"
                     onClick={handleScanReport}
                     disabled={isScanningReport}
-                    className="px-4 py-2 rounded-xl bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold shadow-xs transition-all disabled:opacity-50"
+                    className="h-9 px-4 btn-primary rounded-xl text-xs font-medium disabled:opacity-50"
                   >
                     {isScanningReport
-                      ? 'Scanning with Gemini...'
-                      : `Scan ${scanPhotos.length} Photo${scanPhotos.length === 1 ? '' : 's'}`}
+                      ? 'Scanning…'
+                      : `Scan ${scanPhotos.length} photo${scanPhotos.length === 1 ? '' : 's'}`}
                   </button>
                   <button
                     type="button"
                     onClick={handleClearScan}
-                    className="px-3 py-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-600"
+                    className="h-9 px-3 btn-secondary rounded-xl text-xs font-medium"
                   >
                     Clear
                   </button>
@@ -915,7 +889,7 @@ export default function RecipesClient({
               {scanPhotos.map((photo, idx) => (
                 <div
                   key={photo.id}
-                  className="relative w-20 h-20 rounded-xl overflow-hidden border border-orange-200 bg-white shadow-2xs group"
+                  className="relative w-20 h-20 rounded-xl overflow-hidden border border-neutral-900/[0.12] bg-white"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -927,9 +901,9 @@ export default function RecipesClient({
                     type="button"
                     onClick={() => handleRemovePhoto(photo.id)}
                     aria-label={`Remove photo ${idx + 1}`}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-[10px] font-bold flex items-center justify-center hover:bg-red-600"
+                    className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/70 text-white flex items-center justify-center hover:bg-[#b91c1c]"
                   >
-                    ✕
+                    <X size={12} strokeWidth={1.75} />
                   </button>
                 </div>
               ))}
@@ -937,14 +911,14 @@ export default function RecipesClient({
           )}
 
           {scanError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+            <div className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-xl text-[#b91c1c] text-xs font-medium">
               {scanError}
             </div>
           )}
 
           {scanWarnings.length > 0 && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs space-y-1">
-              <p className="font-bold">Scanner notes:</p>
+            <div className="p-3 bg-[#fffbeb] border border-[#fde68a] rounded-xl text-[#78350f] text-xs space-y-1">
+              <p className="font-medium">Scanner notes</p>
               <ul className="list-disc pl-4 space-y-0.5">
                 {scanWarnings.map((w, i) => (
                   <li key={i}>{w}</li>
@@ -954,52 +928,53 @@ export default function RecipesClient({
           )}
 
           {detectedReportDate && (
-            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs font-semibold">
-              Detected report date: <strong>{detectedReportDate}</strong> (Business Date updated above).
+            <div className="p-3 bg-white border border-neutral-900/[0.08] rounded-xl text-[#171717] text-xs font-mono">
+              Detected report date: {detectedReportDate}
             </div>
           )}
 
           {scanAppliedMsg && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-semibold">
-              ✓ {scanAppliedMsg}
+            <div className="p-3 bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl text-[#15803d] text-xs font-medium flex items-center gap-2">
+              <Check size={14} strokeWidth={1.5} />
+              <span>{scanAppliedMsg}</span>
             </div>
           )}
 
-          {/* Editable Scanned Review Table */}
           {scannedLines.length > 0 && (
-            <div className="bg-white rounded-xl border border-orange-200/80 overflow-hidden space-y-3 p-4">
+            <div className="bg-white rounded-xl border border-neutral-900/[0.08] overflow-hidden space-y-3 p-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h5 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
-                    Review Extracted Sales Lines ({scannedLines.length} found · {matchedScannedCount} matched)
+                  <h5 className="text-xs font-medium text-[#171717]">
+                    Extracted sales lines ({scannedLines.length} found · {matchedScannedCount}{' '}
+                    matched)
                   </h5>
-                  <p className="text-[11px] text-gray-500">
-                    Verify quantities and catalog matches before applying to the EOD sales counts below.
+                  <p className="text-xs text-[#737373]">
+                    Verify quantities and matches before applying below
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleApplyScannedLines}
                   disabled={matchedScannedCount === 0}
-                  className="bg-gray-900 hover:bg-black text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-2xs transition-all disabled:opacity-50 shrink-0"
+                  className="h-8 px-3 btn-primary rounded-lg text-xs font-medium disabled:opacity-50 shrink-0"
                 >
-                  Apply Matched Items to EOD Sales
+                  Apply matched items
                 </button>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-gray-50 text-gray-500 text-[11px] font-bold uppercase tracking-wider border-b border-gray-100">
-                      <th className="py-2 px-3">Receipt Line</th>
-                      <th className="py-2 px-3 w-24">Qty Sold</th>
-                      <th className="py-2 px-3 min-w-[210px]">Matched Menu Item</th>
-                      <th className="py-2 px-3">Match</th>
-                      <th className="py-2 px-3">Recipe</th>
-                      <th className="py-2 px-2 text-right">Drop</th>
+                    <tr className="bg-[#fafafa] text-[#737373] border-b border-neutral-900/[0.08]">
+                      <th className="py-2 px-3 font-medium">Receipt line</th>
+                      <th className="py-2 px-3 font-medium w-24">Qty</th>
+                      <th className="py-2 px-3 font-medium min-w-[210px]">Matched item</th>
+                      <th className="py-2 px-3 font-medium">Match</th>
+                      <th className="py-2 px-3 font-medium">Recipe</th>
+                      <th className="py-2 px-2 font-medium text-right">Drop</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-neutral-900/[0.06]">
                     {scannedLines.map((line) => {
                       const liveMatchedItem = line.matchedCloverItemId
                         ? cloverItemById.get(line.matchedCloverItemId)
@@ -1008,11 +983,13 @@ export default function RecipesClient({
                         (liveMatchedItem?.recipe_ingredients?.length ?? 0) > 0
 
                       return (
-                        <tr key={line.id} className="hover:bg-gray-50/50">
+                        <tr key={line.id} className="hover:bg-[#fafafa]">
                           <td className="py-2.5 px-3">
-                            <span className="font-bold text-gray-900 block">{line.rawName}</span>
+                            <span className="font-medium text-[#171717] block">
+                              {line.rawName}
+                            </span>
                             {line.notes && (
-                              <span className="text-[10px] text-gray-400">{line.notes}</span>
+                              <span className="text-xs text-[#737373]">{line.notes}</span>
                             )}
                           </td>
                           <td className="py-2.5 px-3">
@@ -1022,16 +999,18 @@ export default function RecipesClient({
                               step="1"
                               value={line.quantity}
                               onChange={(e) => updateScannedLineQty(line.id, e.target.value)}
-                              className="w-20 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                              className="w-20 h-8 bg-white border border-neutral-900/[0.14] rounded-lg px-2 text-xs font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                             />
                           </td>
                           <td className="py-2.5 px-3">
                             <select
                               value={line.matchedCloverItemId || ''}
-                              onChange={(e) => updateScannedLineMatch(line.id, e.target.value)}
-                              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                              onChange={(e) =>
+                                updateScannedLineMatch(line.id, e.target.value)
+                              }
+                              className="w-full h-8 bg-white border border-neutral-900/[0.14] rounded-lg px-2.5 text-xs text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                             >
-                              <option value="">— Ignore line —</option>
+                              <option value="">Ignore line</option>
                               {cloverItems.map((item) => (
                                 <option key={item.id} value={item.id}>
                                   {item.name} {item.clover_id ? `(${item.clover_id})` : ''}
@@ -1044,37 +1023,30 @@ export default function RecipesClient({
                           </td>
                           <td className="py-2.5 px-3">
                             {!liveMatchedItem ? (
-                              <span className="text-[11px] text-gray-400">Ignored</span>
+                              <span className="text-[#737373]">Ignored</span>
                             ) : liveHasRecipe ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Mapped
-                              </span>
+                              <span className="font-mono text-xs text-[#15803d]">Mapped</span>
                             ) : (
-                              <div className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                  No recipe
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setRecipeModalError('')
-                                    setSelectedItemForRecipe(liveMatchedItem)
-                                  }}
-                                  className="text-[11px] font-bold text-[#e85d04] hover:underline"
-                                >
-                                  Map Recipe
-                                </button>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRecipeModalError('')
+                                  setSelectedItemForRecipe(liveMatchedItem)
+                                }}
+                                className="text-xs font-medium text-[#c2410c] hover:underline"
+                              >
+                                Map recipe
+                              </button>
                             )}
                           </td>
                           <td className="py-2.5 px-2 text-right">
                             <button
                               type="button"
                               onClick={() => removeScannedLine(line.id)}
-                              className="text-gray-400 hover:text-red-600 px-1.5 py-1 font-bold"
-                              title="Remove line"
+                              aria-label="Remove line"
+                              className="text-[#737373] hover:text-[#b91c1c] p-1"
                             >
-                              ✕
+                              <X size={14} strokeWidth={1.5} />
                             </button>
                           </td>
                         </tr>
@@ -1087,77 +1059,89 @@ export default function RecipesClient({
           )}
         </div>
 
-        {/* Commit Result / Error Alerts */}
         {commitResult?.success && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-2xl text-green-900 text-xs space-y-2">
-            <p className="font-bold">
-              ✓ Committed EOD sales ({commitResult.referenceId}): {commitResult.committedCount} ingredient deduction{commitResult.committedCount === 1 ? '' : 's'} synced across stock &amp; FIFO batches.
+          <div className="p-4 bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl text-[#15803d] text-xs space-y-2">
+            <p className="font-medium flex items-center gap-1.5">
+              <Check size={14} strokeWidth={1.5} />
+              <span>
+                Committed EOD sales ({commitResult.referenceId}):{' '}
+                {commitResult.committedCount} deduction
+                {commitResult.committedCount === 1 ? '' : 's'} synced
+              </span>
             </p>
             {commitResult.shortfalls && commitResult.shortfalls.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-amber-900">
-                <p className="font-bold">Clamped at 0 stock with shortfall noted:</p>
-                <ul className="list-disc pl-4 mt-1">
+              <div className="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-3 text-[#78350f]">
+                <p className="font-medium">Clamped at 0 stock with shortfall:</p>
+                <ul className="list-disc pl-4 mt-1 font-mono tabular-nums">
                   {commitResult.shortfalls.map((s) => (
                     <li key={s.ingredient_id}>
-                      <strong>{s.name}</strong>: required {s.required} {s.unit}, had {s.available} {s.unit} (shortfall {s.shortfall} {s.unit})
+                      {s.name}: required {s.required} {s.unit}, available {s.available}{' '}
+                      {s.unit} (shortfall {s.shortfall} {s.unit})
                     </li>
                   ))}
                 </ul>
               </div>
             )}
-            {commitResult.unmappedSoldItems && commitResult.unmappedSoldItems.length > 0 && (
-              <div className="bg-white/80 border border-green-200 rounded-xl p-2.5 text-gray-700">
-                Skipped {commitResult.unmappedSoldItems.length} sold item(s) without mapped recipes:{' '}
-                {commitResult.unmappedSoldItems.map((u) => `${u.name} (${u.quantity})`).join(', ')}.
-              </div>
-            )}
+            {commitResult.unmappedSoldItems &&
+              commitResult.unmappedSoldItems.length > 0 && (
+                <div className="bg-white border border-[#bbf7d0] rounded-lg p-2.5 text-[#525252]">
+                  Skipped {commitResult.unmappedSoldItems.length} unmapped item(s):{' '}
+                  {commitResult.unmappedSoldItems
+                    .map((u) => `${u.name} (${u.quantity})`)
+                    .join(', ')}
+                </div>
+              )}
           </div>
         )}
 
         {salesErrorMsg && (
-          <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+          <div className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-xl text-[#b91c1c] text-xs font-medium">
             {salesErrorMsg}
           </div>
         )}
 
-        {/* Optional EOD Note */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-              Optional Shift / Report Note
-            </label>
+        {/* Shift note */}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="flex-1 space-y-1">
+            <label className="block text-xs text-[#737373]">Shift note (optional)</label>
             <input
               type="text"
-              placeholder="e.g. Evening register close — Clover Z-report"
+              placeholder="Evening register close"
               value={eodNote}
               onChange={(e) => setEodNote(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+              className="w-full h-9 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-xs text-[#171717] placeholder-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
             />
           </div>
           {totalItemsSold > 0 && (
             <button
               type="button"
               onClick={() => setSalesInputs({})}
-              className="self-start sm:self-end px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50"
+              className="h-9 px-3 btn-secondary rounded-xl text-xs font-medium shrink-0"
             >
-              Reset Quantities ({totalItemsSold})
+              Reset quantities ({totalItemsSold})
             </button>
           )}
         </div>
 
-        {/* Inputs Grid for Clover Items Sales Volume */}
+        {/* Manual item count grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {cloverItems.map((item) => {
             const hasRecipe = (item.recipe_ingredients?.length ?? 0) > 0
             return (
-              <div key={item.id} className="bg-gray-50 border border-gray-200/80 rounded-xl p-3 space-y-1.5">
+              <div
+                key={item.id}
+                className="bg-[#fafafa] border border-neutral-900/[0.08] rounded-xl p-3 space-y-2"
+              >
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-gray-800 line-clamp-1" title={item.name}>
+                  <span
+                    className="text-xs font-medium text-[#171717] line-clamp-1"
+                    title={item.name}
+                  >
                     {item.name}
                   </span>
                   {!hasRecipe && (
-                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">
-                      No recipe
+                    <span className="font-mono text-[10px] text-[#b45309] shrink-0">
+                      Unmapped
                     </span>
                   )}
                 </div>
@@ -1165,26 +1149,27 @@ export default function RecipesClient({
                   <input
                     type="number"
                     min="0"
-                    placeholder="0 sold"
+                    placeholder="0"
                     value={salesInputs[item.id] || ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseInt(e.target.value, 10) || 0)
                       setSalesInputs((prev) => ({ ...prev, [item.id]: val }))
                     }}
-                    className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                    className="w-full h-8 bg-white border border-neutral-900/[0.14] rounded-lg px-2.5 text-xs font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                   />
-                  <span className="text-[11px] text-gray-500 font-medium">units</span>
+                  <span className="text-xs text-[#737373]">sold</span>
                 </div>
               </div>
             )
           })}
         </div>
 
-        {/* Unmapped Sold Items Warning */}
         {unmappedSoldItems.length > 0 && (
-          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-2">
-            <p className="font-bold">
-              {unmappedSoldItems.length} sold item{unmappedSoldItems.length === 1 ? ' has' : 's have'} no recipe mapped yet (will be skipped on commit):
+          <div className="p-4 bg-[#fffbeb] border border-[#fde68a] rounded-xl text-xs text-[#78350f] space-y-2">
+            <p className="font-medium">
+              {unmappedSoldItems.length} sold item
+              {unmappedSoldItems.length === 1 ? ' has' : 's have'} no recipe mapped (will be
+              skipped)
             </p>
             <div className="flex flex-wrap gap-2">
               {unmappedSoldItems.map((u) => {
@@ -1199,10 +1184,15 @@ export default function RecipesClient({
                         setSelectedItemForRecipe(fullItem)
                       }
                     }}
-                    className="inline-flex items-center gap-1.5 bg-white border border-amber-300 hover:border-[#e85d04] text-amber-950 font-semibold px-2.5 py-1 rounded-lg"
+                    className="h-8 inline-flex items-center gap-1.5 bg-white border border-[#fde68a] hover:border-[#c2410c] text-[#171717] px-2.5 rounded-lg"
                   >
-                    <span>{u.name} ({u.quantity})</span>
-                    <span className="text-[#e85d04] font-bold">Map Recipe →</span>
+                    <span>
+                      {u.name} ({u.quantity})
+                    </span>
+                    <span className="text-[#c2410c] inline-flex items-center gap-0.5 font-medium">
+                      Map
+                      <ArrowRight size={12} strokeWidth={1.5} />
+                    </span>
                   </button>
                 )
               })}
@@ -1210,13 +1200,13 @@ export default function RecipesClient({
           </div>
         )}
 
-        {/* Deficit Calculation Results Grid */}
+        {/* Projected depletion */}
         <div ref={depletionSectionRef}>
           {deficitAnalysis.length > 0 ? (
             <div className="space-y-3 pt-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Projected Ingredient Depletion ({deficitAnalysis.length} ingredients)
+                <h4 className="text-sm font-medium text-[#171717]">
+                  Projected ingredient depletion ({deficitAnalysis.length})
                 </h4>
                 <button
                   type="button"
@@ -1225,11 +1215,11 @@ export default function RecipesClient({
                     isCommittingSales ||
                     (Boolean(eodStatus?.alreadyCommitted) && !allowSupplemental)
                   }
-                  className="bg-[#2e7d32] hover:bg-[#256829] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
+                  className="h-9 px-4 btn-primary rounded-xl text-xs font-medium disabled:opacity-50 self-start sm:self-auto"
                 >
                   {isCommittingSales
-                    ? 'Committing...'
-                    : `Confirm & Commit EOD Sales (${businessDate})`}
+                    ? 'Committing…'
+                    : `Confirm and commit (${businessDate})`}
                 </button>
               </div>
 
@@ -1237,40 +1227,45 @@ export default function RecipesClient({
                 {deficitAnalysis.map((item) => (
                   <div
                     key={item.ingredientId}
-                    className={`p-4 rounded-xl border transition-all ${
+                    className={`p-4 rounded-xl border ${
                       item.isDeficit
-                        ? 'bg-red-50/70 border-red-200 shadow-2xs'
-                        : 'bg-green-50/50 border-green-200'
+                        ? 'bg-[#fef2f2] border-[#fecaca]'
+                        : 'bg-[#fafafa] border-neutral-900/[0.08]'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h5 className="text-sm font-bold text-gray-900">{item.name}</h5>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Current: <strong>{item.currentStock} {item.unit}</strong> · Need: <strong>{item.totalRequired} {item.unit}</strong>
+                        <h5 className="text-sm font-medium text-[#171717]">{item.name}</h5>
+                        <p className="text-xs text-[#737373] font-mono tabular-nums mt-0.5">
+                          On hand {item.currentStock} · Need {item.totalRequired} {item.unit}
                         </p>
                       </div>
-                      {item.isDeficit ? (
-                        <span className="bg-red-100 text-red-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          Shortfall
-                        </span>
-                      ) : (
-                        <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          Covered
-                        </span>
-                      )}
+                      <span
+                        className={`font-mono text-xs px-2 py-0.5 rounded-md border ${
+                          item.isDeficit
+                            ? 'bg-white border-[#fecaca] text-[#b91c1c]'
+                            : 'bg-[#f0fdf4] border-[#bbf7d0] text-[#15803d]'
+                        }`}
+                      >
+                        {item.isDeficit ? 'Shortfall' : 'Covered'}
+                      </span>
                     </div>
 
-                    <div className="mt-3 pt-2 border-t border-gray-200/60 flex items-center justify-between text-xs">
-                      <span className="text-gray-600">After Commit:</span>
-                      <span className={`font-extrabold ${item.isDeficit ? 'text-red-600' : 'text-[#2e7d32]'}`}>
+                    <div className="mt-3 pt-2 border-t border-neutral-900/[0.06] flex items-center justify-between text-xs font-mono tabular-nums">
+                      <span className="font-sans text-[#737373]">After commit</span>
+                      <span
+                        className={`font-medium ${
+                          item.isDeficit ? 'text-[#b91c1c]' : 'text-[#15803d]'
+                        }`}
+                      >
                         {item.projectedAfterClamp} {item.unit}
                       </span>
                     </div>
 
                     {item.isDeficit && (
-                      <div className="mt-1 text-[11px] text-red-600 font-semibold">
-                        Clamped at 0 · Shortfall: {item.deficitAmount} {item.unit} (~${item.estimatedCost.toFixed(2)})
+                      <div className="mt-1 text-xs font-mono tabular-nums text-[#b91c1c]">
+                        Shortfall {item.deficitAmount} {item.unit} (~$
+                        {item.estimatedCost.toFixed(2)})
                       </div>
                     )}
                   </div>
@@ -1278,91 +1273,99 @@ export default function RecipesClient({
               </div>
             </div>
           ) : (
-            <div className="text-center py-4 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
-              <p className="text-xs text-gray-500">
-                Scan a Clover EOD sales report above or enter item quantities to preview raw ingredient deductions.
+            <div className="text-center py-6 bg-[#fafafa] rounded-xl border border-dashed border-neutral-900/[0.12]">
+              <p className="text-xs text-[#737373]">
+                Scan a report or enter sold counts above to preview ingredient deductions
               </p>
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* Modal: Edit Recipe Ingredients */}
+      {/* Edit Recipe Modal */}
       {selectedItemForRecipe && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-gray-100 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-neutral-900/[0.08] space-y-5">
+            <div className="flex items-center justify-between border-b border-neutral-900/[0.08] pb-3">
               <div>
-                <h3 className="text-base font-bold text-gray-900">
-                  Recipe for: {selectedItemForRecipe.name}
+                <h3 className="text-base font-medium text-[#171717]">
+                  {selectedItemForRecipe.name}
                 </h3>
-                <p className="text-xs text-gray-500">
-                  Required ingredients per serving ({selectedItemForRecipe.clover_id})
+                <p className="text-xs text-[#737373] font-mono">
+                  Ingredients per serving · {selectedItemForRecipe.clover_id || '—'}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedItemForRecipe(null)}
-                className="text-gray-400 hover:text-gray-600 p-1 text-lg font-bold"
+                aria-label="Close"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#737373] hover:text-[#171717] hover:bg-[#f4f4f5]"
               >
-                ✕
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
 
             {recipeModalError && (
-              <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
+              <div className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-xl text-xs text-[#b91c1c]">
                 {recipeModalError}
               </div>
             )}
 
-            {/* List of currently mapped ingredients */}
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {selectedItemForRecipe.recipe_ingredients && selectedItemForRecipe.recipe_ingredients.length > 0 ? (
+              {selectedItemForRecipe.recipe_ingredients &&
+              selectedItemForRecipe.recipe_ingredients.length > 0 ? (
                 selectedItemForRecipe.recipe_ingredients.map((rec) => (
                   <div
                     key={rec.id}
-                    className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-200/70"
+                    className="flex items-center justify-between bg-[#fafafa] px-3.5 py-2.5 rounded-xl border border-neutral-900/[0.08]"
                   >
                     <div>
-                      <span className="text-xs font-bold text-gray-800">
+                      <span className="text-sm font-medium text-[#171717]">
                         {rec.ingredient?.name || 'Ingredient'}
                       </span>
-                      <p className="text-[11px] text-gray-500">
+                      <p className="text-xs text-[#737373] font-mono tabular-nums">
                         {rec.quantity_required} {rec.ingredient?.unit || 'units'} per order
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveIngredient(rec.id)}
-                      className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                      className="text-[#b91c1c] hover:bg-[#fef2f2] text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
                     >
                       Remove
                     </button>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-gray-400 py-3 text-center">No ingredients mapped yet.</p>
+                <p className="text-xs text-[#737373] py-4 text-center">
+                  No ingredients mapped yet
+                </p>
               )}
             </div>
 
-            {/* Form to attach a new ingredient */}
-            <form onSubmit={handleAddIngredientToRecipe} className="border-t border-gray-100 pt-4 space-y-3">
-              <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                Add Ingredient to Recipe
+            <form
+              onSubmit={handleAddIngredientToRecipe}
+              className="border-t border-neutral-900/[0.08] pt-4 space-y-3"
+            >
+              <span className="text-xs font-medium text-[#525252] block">
+                Add ingredient
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <select
                   value={selectedIngredientToAdd}
                   onChange={(e) => setSelectedIngredientToAdd(e.target.value)}
-                  className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                  className="w-full h-9 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-xs text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                   required
                 >
-                  <option value="">Select ingredient...</option>
+                  <option value="">Select ingredient</option>
                   {ingredients.map((ing) => {
-                    const isJelly = ing.name.toLowerCase().includes('jelly') || ing.category === 'Hand-Cooked Jellies'
+                    const isJelly =
+                      ing.name.toLowerCase().includes('jelly') ||
+                      ing.category === 'Hand-Cooked Jellies'
                     return (
                       <option key={ing.id} value={ing.id}>
-                        {ing.name} ({ing.unit}){isJelly ? ' · 🍳 Hand-Cooked' : ''}
+                        {ing.name} ({ing.unit})
+                        {isJelly ? ' · In-house' : ''}
                       </option>
                     )
                   })}
@@ -1373,28 +1376,28 @@ export default function RecipesClient({
                     type="number"
                     step="0.001"
                     min="0.001"
-                    placeholder="Qty req"
+                    placeholder="Qty"
                     value={qtyToAdd}
                     onChange={(e) => setQtyToAdd(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                    className="w-full h-9 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-xs font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                     required
                   />
                   <button
                     type="submit"
                     disabled={isAddingIngredient}
-                    className="bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0"
+                    className="h-9 px-3 btn-primary rounded-xl text-xs font-medium shrink-0"
                   >
-                    {isAddingIngredient ? '...' : 'Add'}
+                    {isAddingIngredient ? '…' : 'Add'}
                   </button>
                 </div>
               </div>
             </form>
 
-            <div className="pt-2 text-right">
+            <div className="pt-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => setSelectedItemForRecipe(null)}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold px-4 py-2 rounded-xl transition-all"
+                className="h-9 px-4 btn-secondary rounded-xl text-xs font-medium"
               >
                 Done
               </button>
@@ -1403,77 +1406,72 @@ export default function RecipesClient({
         </div>
       )}
 
-      {/* Modal: Add New Clover Item */}
+      {/* Add Clover Item Modal */}
       {showAddItemModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-base font-bold text-gray-900">Add Clover POS Item</h3>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-neutral-900/[0.08] space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-900/[0.08] pb-3">
+              <h3 className="text-base font-medium text-[#171717]">Add Clover item</h3>
               <button
                 type="button"
                 onClick={() => setShowAddItemModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+                aria-label="Close"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#737373] hover:text-[#171717] hover:bg-[#f4f4f5]"
               >
-                ✕
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
 
             {itemModalError && (
-              <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
+              <div className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-xl text-xs text-[#b91c1c]">
                 {itemModalError}
               </div>
             )}
 
-            <form onSubmit={handleCreateCloverItem} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Item Name
-                </label>
+            <form onSubmit={handleCreateCloverItem} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#525252]">Item name</label>
                 <input
                   type="text"
-                  placeholder="e.g. Chè Thái Đặc Biệt"
+                  placeholder="Chè Thái Đặc Biệt"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                  className="w-full h-10 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-sm text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Clover Item ID
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#525252]">
+                  Clover item ID
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. CLV-006"
+                  placeholder="CLV-006"
                   value={newItemCloverId}
                   onChange={(e) => setNewItemCloverId(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                  className="w-full h-10 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-sm font-mono text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Price ($)
-                  </label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-[#525252]">Price ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="7.50"
                     value={newItemPrice}
                     onChange={(e) => setNewItemPrice(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                    className="w-full h-10 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-sm font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Category
-                  </label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-[#525252]">Category</label>
                   <select
                     value={newItemCategory}
                     onChange={(e) => setNewItemCategory(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                    className="w-full h-10 bg-white border border-neutral-900/[0.14] rounded-xl px-3 text-xs text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                   >
                     {MENU_CATEGORIES.filter((c) => c !== 'All').map((cat) => (
                       <option key={cat} value={cat}>
@@ -1484,20 +1482,20 @@ export default function RecipesClient({
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-3">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddItemModal(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2.5 rounded-xl transition-all"
+                  className="flex-1 h-9 btn-secondary rounded-xl text-xs font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingItem}
-                  className="flex-1 bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-50"
+                  className="flex-1 h-9 btn-primary rounded-xl text-xs font-medium disabled:opacity-50"
                 >
-                  {isSavingItem ? 'Saving...' : 'Save Item'}
+                  {isSavingItem ? 'Saving…' : 'Save item'}
                 </button>
               </div>
             </form>

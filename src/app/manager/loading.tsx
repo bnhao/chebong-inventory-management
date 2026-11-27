@@ -2,22 +2,17 @@ import Image from 'next/image'
 
 export default function ManagerLoading() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 space-y-4">
-      <div className="relative h-14 w-14 animate-pulse">
+    <div className="flex flex-col items-center justify-center py-24 gap-4">
+      <div className="relative h-10 w-10">
         <Image
           src="/chebong-bowl.png"
-          alt="CB Inventory Logo"
+          alt="CB Inventory"
           fill
           className="object-contain"
           priority
         />
       </div>
-      <div className="w-36 h-1.5 bg-orange-100 rounded-full overflow-hidden">
-        <div className="w-full h-full bg-[#e85d04] rounded-full animate-pulse" />
-      </div>
-      <p className="text-xs font-semibold text-gray-400 tracking-wide">
-        Loading CB Inventory...
-      </p>
+      <p className="text-sm text-[#737373]">Loading inventory</p>
     </div>
   )
 }

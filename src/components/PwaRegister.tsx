@@ -22,6 +22,15 @@ export default function PwaRegister() {
       return
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const reg of regs) {
+          reg.unregister().catch(() => {})
+        }
+      })
+      return
+    }
+
     // 1. Listen for Service Worker controllerchange to reload cleanly once
     const handleControllerChange = () => {
       if (refreshing.current) return
@@ -172,9 +181,9 @@ export default function PwaRegister() {
             <button
               onClick={handleApplyUpdate}
               disabled={isUpdating}
-              className="bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-md transition-all active:scale-95 shrink-0"
+              className="btn-primary text-xs font-medium px-3.5 py-1.5 rounded-xl shrink-0"
             >
-              {isUpdating ? 'Updating...' : 'Update'}
+              {isUpdating ? 'Updating…' : 'Update'}
             </button>
           </div>
         </div>
@@ -214,7 +223,7 @@ export default function PwaRegister() {
               {!isIOS && deferredPrompt && (
                 <button
                   onClick={handleInstallClick}
-                  className="bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
+                  className="btn-primary text-xs font-medium px-3 py-1.5 rounded-xl"
                 >
                   Install
                 </button>

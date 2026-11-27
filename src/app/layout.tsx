@@ -1,11 +1,26 @@
 import type { Metadata, Viewport } from 'next'
+import { DM_Sans, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import PwaRegister from '@/components/PwaRegister'
 import RealtimeSync from '@/components/RealtimeSync'
 
+const dmSans = DM_Sans({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['400', '500', '600'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'CB Inventory',
-  description: 'Smart Inventory & Operations Management System for Chè Bông Dessert & Snacks — Developed by Cleverstock',
+  description: 'Daily inventory, freshness, and restock operations for Chè Bông Dessert & Snacks',
   applicationName: 'CB Inventory',
   authors: [{ name: 'Cleverstock' }],
   creator: 'Cleverstock',
@@ -33,7 +48,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#e85d04',
+  themeColor: '#c2410c',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -45,12 +60,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${dmSans.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-touch-fullscreen" content="yes" />
       </head>
-      <body className="antialiased bg-white min-h-screen">
+      <body className="font-sans antialiased bg-[#fafafa] text-[#171717] min-h-screen">
         {children}
         <PwaRegister />
         <RealtimeSync />
@@ -58,4 +73,3 @@ export default function RootLayout({
     </html>
   )
 }
-

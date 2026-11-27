@@ -2,98 +2,58 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import {
+  LayoutDashboard,
+  PackagePlus,
+  ClipboardCheck,
+  ShoppingBasket,
+  type LucideIcon,
+} from 'lucide-react'
 
 interface NavItem {
   href: string
   label: string
-  icon: (active: boolean) => React.ReactNode
-}
-
-function HomeIcon(active: boolean) {
-  const color = active ? '#e85d04' : '#6b7280'
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
-      <path d="M9 21V12h6v9"/>
-    </svg>
-  )
-}
-
-function RestockIcon(active: boolean) {
-  const color = active ? '#e85d04' : '#6b7280'
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-      <line x1="12" y1="22.08" x2="12" y2="12"/>
-    </svg>
-  )
-}
-
-function CycleCountIcon(active: boolean) {
-  const color = active ? '#e85d04' : '#6b7280'
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 11 12 14 22 4"/>
-      <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-    </svg>
-  )
-}
-
-function GroceriesIcon(active: boolean) {
-  const color = active ? '#e85d04' : '#6b7280'
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="21" r="1"/>
-      <circle cx="20" cy="21" r="1"/>
-      <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.57L23 6H6"/>
-    </svg>
-  )
+  Icon: LucideIcon
 }
 
 const navItems: NavItem[] = [
-  { href: '/staff/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { href: '/staff/restock', label: 'Restock', icon: RestockIcon },
-  { href: '/staff/cycle-count', label: 'Cycle Count', icon: CycleCountIcon },
-  { href: '/staff/groceries', label: 'Groceries', icon: GroceriesIcon },
+  { href: '/staff/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { href: '/staff/restock', label: 'Restock', Icon: PackagePlus },
+  { href: '/staff/cycle-count', label: 'Cycle count', Icon: ClipboardCheck },
+  { href: '/staff/groceries', label: 'Groceries', Icon: ShoppingBasket },
 ]
 
 export default function StaffDesktopNav() {
   const pathname = usePathname()
 
   return (
-    <div className="hidden md:flex items-center gap-2">
-      <div className="flex items-center surface-card rounded-2xl p-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/staff/dashboard' && pathname.startsWith(item.href))
+    <nav aria-label="Staff navigation" className="hidden md:flex items-center">
+      <div className="flex items-center bg-white border border-neutral-900/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.04)] rounded-xl p-1 gap-1">
+        {navItems.map(({ href, label, Icon }) => {
+          const isActive =
+            pathname === href ||
+            (href !== '/staff/dashboard' && pathname.startsWith(href))
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={href}
+              href={href}
               prefetch={true}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+              className={`h-9 flex items-center gap-2 px-3 rounded-lg text-sm font-medium transition-colors duration-150 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c] ${
                 isActive
-                  ? 'bg-linear-to-b from-orange-50 to-orange-100/70 text-[#e85d04] border border-orange-200/80 shadow-2xs'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/90'
+                  ? 'bg-[#fff7ed] text-[#c2410c] border border-[#fed7aa]'
+                  : 'text-[#525252] hover:text-[#171717] hover:bg-[#f4f4f5] border border-transparent'
               }`}
             >
-              <span className={`transition-transform duration-200 ${isActive ? 'scale-105' : ''}`}>
-                {item.icon(isActive)}
-              </span>
-              <span>{item.label}</span>
+              <Icon
+                size={16}
+                strokeWidth={1.5}
+                className={isActive ? 'text-[#c2410c]' : 'text-[#737373]'}
+              />
+              <span>{label}</span>
             </Link>
           )
         })}
       </div>
-
-      {/* Staff Profile Avatar */}
-      <div className="w-10 h-10 rounded-full surface-card flex items-center justify-center shrink-0 ml-1 transition-transform duration-200 hover:scale-105">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-      </div>
-    </div>
+    </nav>
   )
 }
-

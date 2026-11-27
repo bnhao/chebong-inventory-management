@@ -10,53 +10,59 @@ export default function TopBar() {
   const isManager = pathname.startsWith('/manager')
 
   return (
-    <header className="sticky top-0 z-40 surface-glass pt-safe">
+    <header className="sticky top-0 z-40 surface-bar pt-safe">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand Logo & Name */}
           <Link
             href={isManager ? '/manager/dashboard' : '/staff/dashboard'}
             prefetch={true}
-            className="flex items-center gap-2 sm:gap-2.5 group py-1"
+            className="flex items-center gap-2.5 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c] rounded-lg"
           >
-            <div className="relative h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center shrink-0">
+            <div className="relative h-8 w-8 flex items-center justify-center shrink-0">
               <Image
                 src="/chebong-bowl.png"
-                alt="CB Inventory Logo"
+                alt="CB Inventory"
                 fill
-                className="object-contain logo-drop-shadow transition-transform duration-300 ease-out group-hover:scale-108 group-hover:-rotate-3"
+                className="object-contain"
                 priority
-                sizes="40px"
+                sizes="32px"
               />
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-base sm:text-lg font-black tracking-tight text-gray-900">
-                CB <span className="text-[#e85d04]">Inventory</span>
-              </span>
-            </div>
+            <span className="text-base font-semibold tracking-[-0.01em] text-[#171717]">
+              CB Inventory
+            </span>
           </Link>
 
-          {/* Role Toggle Pill (Staff View / Manager View) */}
-          <div className="flex items-center bg-gray-100/90 border border-gray-200/70 shadow-inner rounded-full p-1 gap-1">
+          <div
+            role="tablist"
+            aria-label="Workspace view"
+            className="flex items-center bg-[#f4f4f5] border border-neutral-900/[0.08] rounded-xl p-1 gap-1"
+          >
             <button
+              type="button"
+              role="tab"
+              aria-selected={!isManager}
               onClick={() => router.push('/staff/dashboard')}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              className={`h-8 px-3 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c] ${
                 !isManager
-                  ? 'btn-tactile-primary text-white'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
+                  ? 'bg-white text-[#171717] border border-neutral-900/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
+                  : 'text-[#525252] hover:text-[#171717] border border-transparent'
               }`}
             >
-              Staff View
+              Staff
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={isManager}
               onClick={() => router.push('/manager/dashboard')}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              className={`h-8 px-3 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2410c] ${
                 isManager
-                  ? 'btn-tactile-primary text-white'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-white/60'
+                  ? 'bg-white text-[#171717] border border-neutral-900/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
+                  : 'text-[#525252] hover:text-[#171717] border border-transparent'
               }`}
             >
-              Manager View
+              Manager
             </button>
           </div>
         </div>
@@ -64,4 +70,3 @@ export default function TopBar() {
     </header>
   )
 }
-

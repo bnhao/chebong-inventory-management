@@ -1,10 +1,15 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { ArrowUpRight, Check, Download, Search, X } from 'lucide-react'
 import { buildAuditCsv, downloadCsvFile } from '@/lib/csv'
-import { formatStoreTimestamp, getStoreDateString, getStoreTimezone, StoreRangeBounds } from '@/lib/timezone'
+import {
+  formatStoreTimestamp,
+  getStoreDateString,
+  getStoreTimezone,
+  StoreRangeBounds,
+} from '@/lib/timezone'
 import { AuditReportTransaction } from './page'
 
 interface Props {
@@ -16,11 +21,18 @@ interface Props {
 
 const RANGE_OPTIONS: Array<{ key: StoreRangeBounds['rangeKey']; label: string }> = [
   { key: 'today', label: 'Today' },
-  { key: '7d', label: '7 Days' },
-  { key: '30d', label: '30 Days' },
-  { key: 'month', label: 'This Month' },
-  { key: 'all', label: 'All Time' },
+  { key: '7d', label: '7 days' },
+  { key: '30d', label: '30 days' },
+  { key: 'month', label: 'This month' },
+  { key: 'all', label: 'All time' },
 ]
+
+const LOG_TYPE_LABEL: Record<string, string> = {
+  CYCLE_COUNT: 'Audit',
+  RESTOCK: 'Restock',
+  WASTE: 'Waste',
+  SALE: 'Clover sale',
+}
 
 function formatSignedCurrency(amount: number): string {
   const abs = Math.abs(amount).toFixed(2)
@@ -40,7 +52,9 @@ export default function ReportsClient({
 
   const transactions = initialTransactions
   const [typeFilter, setTypeFilter] = useState<string>('ALL')
-  const [discrepancyFilter, setDiscrepancyFilter] = useState<'all' | 'shortage' | 'surplus' | 'match'>('all')
+  const [discrepancyFilter, setDiscrepancyFilter] = useState<
+    'all' | 'shortage' | 'surplus' | 'match'
+  >('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [inspectedTx, setInspectedTx] = useState<AuditReportTransaction | null>(null)
 
@@ -48,7 +62,11 @@ export default function ReportsClient({
   const [customTo, setCustomTo] = useState(toDate)
   const [showCustomDates, setShowCustomDates] = useState(rangeKey === 'custom')
 
-  function navigateWithRange(nextRange: StoreRangeBounds['rangeKey'], nextFrom?: string, nextTo?: string) {
+  function navigateWithRange(
+    nextRange: StoreRangeBounds['rangeKey'],
+    nextFrom?: string,
+    nextTo?: string
+  ) {
     const params = new URLSearchParams()
     params.set('range', nextRange)
     if (nextRange === 'custom' && nextFrom && nextTo) {
@@ -69,18 +87,27 @@ export default function ReportsClient({
     navigateWithRange('custom', customFrom, customTo)
   }
 
-  // KPI Calculations
   const stats = useMemo(() => {
     const cycleCounts = transactions.filter((t) => t.transaction_type === 'CYCLE_COUNT')
     const wasteLogs = transactions.filter((t) => t.transaction_type === 'WASTE')
     const saleLogs = transactions.filter((t) => t.transaction_type === 'SALE')
 
     const exactMatches = cycleCounts.filter((t) => t.discrepancy === 0).length
-    const accuracyRate = cycleCounts.length > 0 ? Math.round((exactMatches / cycleCounts.length) * 100) : 100
+    const accuracyRate =
+      cycleCounts.length > 0 ? Math.round((exactMatches / cycleCounts.length) * 100) : 100
 
-    const netVarianceImpact = cycleCounts.reduce((sum, t) => sum + (t.financialImpact || 0), 0)
-    const totalWasteLoss = wasteLogs.reduce((sum, t) => sum + Math.abs(t.financialImpact || 0), 0)
-    const totalSalesCogs = saleLogs.reduce((sum, t) => sum + Math.abs(t.financialImpact || 0), 0)
+    const netVarianceImpact = cycleCounts.reduce(
+      (sum, t) => sum + (t.financialImpact || 0),
+      0
+    )
+    const totalWasteLoss = wasteLogs.reduce(
+      (sum, t) => sum + Math.abs(t.financialImpact || 0),
+      0
+    )
+    const totalSalesCogs = saleLogs.reduce(
+      (sum, t) => sum + Math.abs(t.financialImpact || 0),
+      0
+    )
 
     return {
       totalAudits: cycleCounts.length,
@@ -91,7 +118,6 @@ export default function ReportsClient({
     }
   }, [transactions])
 
-  // Count by log type
   const typeCounts = useMemo(() => {
     return {
       ALL: transactions.length,
@@ -102,13 +128,20 @@ export default function ReportsClient({
     }
   }, [transactions])
 
-  // Filtered transactions
   const filtered = useMemo(() => {
     return transactions.filter((tx) => {
       if (typeFilter !== 'ALL' && tx.transaction_type !== typeFilter) return false
 
-      if (discrepancyFilter === 'shortage' && (tx.discrepancy === null || tx.discrepancy >= 0)) return false
-      if (discrepancyFilter === 'surplus' && (tx.discrepancy === null || tx.discrepancy <= 0)) return false
+      if (
+        discrepancyFilter === 'shortage' &&
+        (tx.discrepancy === null || tx.discrepancy >= 0)
+      )
+        return false
+      if (
+        discrepancyFilter === 'surplus' &&
+        (tx.discrepancy === null || tx.discrepancy <= 0)
+      )
+        return false
       if (discrepancyFilter === 'match' && tx.discrepancy !== 0) return false
 
       if (searchQuery) {
@@ -131,59 +164,40 @@ export default function ReportsClient({
 
   return (
     <div className="space-y-6">
-      {/* Branded Audit Ledger Header */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 space-y-4">
+      {/* Header & date range */}
+      <div className="surface-card rounded-2xl p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="relative h-11 w-11 shrink-0">
-              <Image
-                src="/chebong-bowl.png"
-                alt="CB Inventory Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <div>
-              <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">
-                Activity Log History &amp; Audit Ledger
-              </h2>
-              <p className="text-xs text-gray-500">
-                {rangeKey === 'all'
-                  ? `All recorded store movements (${transactions.length} entries)`
-                  : `Showing ${fromDate} to ${toDate} (${transactions.length} entries · ${storeTimeZone})`}
-              </p>
-            </div>
+          <div>
+            <h2 className="text-base font-medium text-[#171717]">
+              Activity and audit ledger
+            </h2>
+            <p className="text-xs text-[#737373] font-mono tabular-nums mt-0.5">
+              {rangeKey === 'all'
+                ? `${transactions.length} recorded movements`
+                : `${fromDate} to ${toDate} · ${transactions.length} entries · ${storeTimeZone}`}
+            </p>
           </div>
 
           <button
             type="button"
             onClick={handleExportCSV}
-            className="inline-flex items-center justify-center gap-2 bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-98 shrink-0"
+            className="h-9 px-4 btn-primary rounded-xl text-xs font-medium inline-flex items-center justify-center gap-2 shrink-0"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export Logs CSV ({filtered.length})
+            <Download size={14} strokeWidth={1.5} />
+            <span>Export CSV ({filtered.length})</span>
           </button>
         </div>
 
-        {/* Date Range Filter Bar */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1">
-            Date Range:
-          </span>
+        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-neutral-900/[0.08]">
           {RANGE_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               type="button"
               onClick={() => handlePresetClick(opt.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors ${
                 rangeKey === opt.key && !showCustomDates
-                  ? 'bg-gray-900 text-white shadow-2xs'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
+                  ? 'bg-[#171717] text-white'
+                  : 'bg-[#f4f4f5] text-[#525252] hover:text-[#171717]'
               }`}
             >
               {opt.label}
@@ -192,35 +206,38 @@ export default function ReportsClient({
           <button
             type="button"
             onClick={() => setShowCustomDates((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors border ${
               rangeKey === 'custom' || showCustomDates
-                ? 'bg-orange-50 text-[#e85d04] border border-orange-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80'
+                ? 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]'
+                : 'bg-[#f4f4f5] text-[#525252] border-transparent hover:text-[#171717]'
             }`}
           >
-            Custom Range
+            Custom range
           </button>
 
           {showCustomDates && (
-            <form onSubmit={handleApplyCustomRange} className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0 sm:ml-2">
+            <form
+              onSubmit={handleApplyCustomRange}
+              className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 sm:ml-2"
+            >
               <input
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                className="h-8 bg-white border border-neutral-900/[0.14] rounded-lg px-2.5 text-xs font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                 required
               />
-              <span className="text-xs text-gray-400">to</span>
+              <span className="text-xs text-[#737373]">to</span>
               <input
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+                className="h-8 bg-white border border-neutral-900/[0.14] rounded-lg px-2.5 text-xs font-mono tabular-nums text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
                 required
               />
               <button
                 type="submit"
-                className="px-3 py-1 rounded-lg bg-[#e85d04] hover:bg-[#d45203] text-white text-xs font-bold"
+                className="h-8 px-3 btn-primary rounded-lg text-xs font-medium"
               >
                 Apply
               </button>
@@ -229,161 +246,145 @@ export default function ReportsClient({
         </div>
       </div>
 
-      {/* Top Metric Cards */}
+      {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Manual Cycle Counts</p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">
+        <div className="surface-card rounded-2xl p-5">
+          <p className="text-xs text-[#737373]">Cycle counts</p>
+          <p className="text-2xl sm:text-[28px] leading-none font-medium font-mono tabular-nums text-[#171717] mt-2">
             {stats.totalAudits}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Accuracy: <strong className="text-[#2e7d32]">{stats.accuracyRate}%</strong></p>
+          <p className="text-xs text-[#737373] mt-2 font-mono tabular-nums">
+            {stats.accuracyRate}% match rate
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Net Audit Variance</p>
-          <p className={`text-2xl sm:text-3xl font-extrabold mt-1 ${stats.netVarianceImpact < 0 ? 'text-red-600' : stats.netVarianceImpact > 0 ? 'text-blue-700' : 'text-gray-900'}`}>
+        <div className="surface-card rounded-2xl p-5">
+          <p className="text-xs text-[#737373]">Net audit variance</p>
+          <p
+            className={`text-2xl sm:text-[28px] leading-none font-medium font-mono tabular-nums mt-2 ${
+              stats.netVarianceImpact < 0
+                ? 'text-[#b91c1c]'
+                : stats.netVarianceImpact > 0
+                ? 'text-[#15803d]'
+                : 'text-[#171717]'
+            }`}
+          >
             {formatSignedCurrency(stats.netVarianceImpact)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Signed count discrepancy value</p>
+          <p className="text-xs text-[#737373] mt-2">Count discrepancy value</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Waste Losses</p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-red-600 mt-1">
+        <div className="surface-card rounded-2xl p-5">
+          <p className="text-xs text-[#737373]">Waste losses</p>
+          <p className="text-2xl sm:text-[28px] leading-none font-medium font-mono tabular-nums text-[#b91c1c] mt-2">
             -${stats.totalWasteLoss.toFixed(2)}
           </p>
-          <p className="text-xs text-red-500 mt-1 font-semibold">Recorded discarded stock</p>
+          <p className="text-xs text-[#737373] mt-2">Discarded stock</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">POS Sales COGS</p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-purple-700 mt-1">
+        <div className="surface-card rounded-2xl p-5">
+          <p className="text-xs text-[#737373]">POS sales COGS</p>
+          <p className="text-2xl sm:text-[28px] leading-none font-medium font-mono tabular-nums text-[#171717] mt-2">
             -${stats.totalSalesCogs.toFixed(2)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Raw ingredient cost deducted</p>
+          <p className="text-xs text-[#737373] mt-2">Ingredient cost deducted</p>
         </div>
       </div>
 
-      {/* Toolbar & Filters */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 sm:p-5 space-y-3.5">
+      {/* Filters */}
+      <div className="surface-card rounded-2xl p-4 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Transaction Type Filter Tabs with Counts */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-gray-100/80 p-1 rounded-xl">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar bg-[#f4f4f5] p-1 rounded-xl w-fit max-w-full">
             {[
-              { id: 'ALL', label: 'All Logs', count: typeCounts.ALL },
-              { id: 'RESTOCK', label: '📦 Restocks', count: typeCounts.RESTOCK },
-              { id: 'WASTE', label: '🗑️ Waste', count: typeCounts.WASTE },
-              { id: 'CYCLE_COUNT', label: '📋 Audits', count: typeCounts.CYCLE_COUNT },
-              { id: 'SALE', label: '🏷️ POS Sales', count: typeCounts.SALE },
+              { id: 'ALL', label: 'All logs', count: typeCounts.ALL },
+              { id: 'RESTOCK', label: 'Restocks', count: typeCounts.RESTOCK },
+              { id: 'WASTE', label: 'Waste', count: typeCounts.WASTE },
+              { id: 'CYCLE_COUNT', label: 'Audits', count: typeCounts.CYCLE_COUNT },
+              { id: 'SALE', label: 'POS sales', count: typeCounts.SALE },
             ].map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setTypeFilter(t.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
                   typeFilter === t.id
-                    ? 'bg-white text-gray-900 shadow-2xs'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-[#171717] border border-neutral-900/[0.08] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+                    : 'text-[#525252] hover:text-[#171717] border border-transparent'
                 }`}
               >
                 <span>{t.label}</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200/70 text-gray-700 font-extrabold">
+                <span className="font-mono text-xs tabular-nums text-[#737373]">
                   {t.count}
                 </span>
               </button>
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold px-3.5 py-2 rounded-xl shadow-2xs transition-all active:scale-98 shrink-0 self-start lg:self-auto"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export Logs CSV
-          </button>
-        </div>
-
-        {/* Search & Audit Discrepancy Filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
-          <div className="relative flex-1 w-full">
+          <div className="relative flex-1 max-w-sm">
+            <Search
+              size={15}
+              strokeWidth={1.5}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]"
+            />
             <input
               type="text"
-              placeholder="Search by ingredient, note, or reference ID..."
+              placeholder="Search logs"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e85d04]"
+              className="w-full h-9 bg-white border border-neutral-900/[0.14] rounded-xl pl-9 pr-8 text-xs text-[#171717] placeholder-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#c2410c]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2 text-xs text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#737373] hover:text-[#171717]"
               >
-                ✕
+                <X size={14} strokeWidth={1.5} />
               </button>
             )}
           </div>
-
-          {typeFilter === 'CYCLE_COUNT' && (
-            <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl p-1 text-xs w-full sm:w-auto">
-              <span className="text-[11px] font-bold text-gray-400 px-2 uppercase">Variance:</span>
-              <button
-                type="button"
-                onClick={() => setDiscrepancyFilter('all')}
-                className={`px-2.5 py-1 rounded-lg font-bold ${
-                  discrepancyFilter === 'all' ? 'bg-white shadow-2xs text-gray-900' : 'text-gray-500'
-                }`}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscrepancyFilter('shortage')}
-                className={`px-2.5 py-1 rounded-lg font-bold ${
-                  discrepancyFilter === 'shortage' ? 'bg-red-50 text-red-700 shadow-2xs' : 'text-gray-500'
-                }`}
-              >
-                Shortages
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscrepancyFilter('surplus')}
-                className={`px-2.5 py-1 rounded-lg font-bold ${
-                  discrepancyFilter === 'surplus' ? 'bg-blue-50 text-blue-700 shadow-2xs' : 'text-gray-500'
-                }`}
-              >
-                Surplus
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscrepancyFilter('match')}
-                className={`px-2.5 py-1 rounded-lg font-bold ${
-                  discrepancyFilter === 'match' ? 'bg-green-50 text-green-700 shadow-2xs' : 'text-gray-500'
-                }`}
-              >
-                Match
-              </button>
-            </div>
-          )}
         </div>
+
+        {typeFilter === 'CYCLE_COUNT' && (
+          <div className="flex items-center gap-1 bg-[#f4f4f5] rounded-xl p-1 text-xs w-fit">
+            <span className="text-[#737373] px-2">Variance:</span>
+            {(
+              [
+                { id: 'all', label: 'All' },
+                { id: 'shortage', label: 'Shortages' },
+                { id: 'surplus', label: 'Surplus' },
+                { id: 'match', label: 'Match' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setDiscrepancyFilter(opt.id)}
+                className={`h-7 px-2.5 rounded-lg font-medium transition-colors ${
+                  discrepancyFilter === opt.id
+                    ? 'bg-white text-[#171717] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+                    : 'text-[#525252] hover:text-[#171717]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* MOBILE CARD VIEW */}
+      {/* Mobile card view */}
       <div className="block md:hidden space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            Log Records ({filtered.length})
-          </h3>
-          <span className="text-[11px] text-gray-400">Tap to inspect</span>
+          <span className="text-xs font-medium text-[#525252]">
+            Records ({filtered.length})
+          </span>
+          <span className="text-xs text-[#737373]">Tap to inspect</span>
         </div>
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center text-xs text-gray-400">
-            No transactions match the selected filter criteria.
+          <div className="surface-card rounded-2xl p-6 text-center text-xs text-[#737373]">
+            No transactions match your filters
           </div>
         ) : (
           filtered.map((tx) => {
@@ -392,56 +393,46 @@ export default function ReportsClient({
               <div
                 key={tx.id}
                 onClick={() => setInspectedTx(tx)}
-                className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-4 space-y-2.5 hover:border-orange-300 transition-all cursor-pointer active:scale-99"
+                className="surface-card-interactive rounded-2xl p-4 space-y-3 cursor-pointer"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h4 className="font-extrabold text-gray-900 text-sm">{tx.ingredientName}</h4>
-                    <span className="text-[11px] text-gray-400">{formattedTs}</span>
+                    <h4 className="font-medium text-[#171717] text-sm">
+                      {tx.ingredientName}
+                    </h4>
+                    <span className="text-xs text-[#737373] font-mono tabular-nums">
+                      {formattedTs}
+                    </span>
                   </div>
-                  <div>
-                    {tx.transaction_type === 'CYCLE_COUNT' ? (
-                      <span className="text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                        📋 Audit
-                      </span>
-                    ) : tx.transaction_type === 'RESTOCK' ? (
-                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                        📦 Restock
-                      </span>
-                    ) : tx.transaction_type === 'WASTE' ? (
-                      <span className="text-[10px] font-bold text-red-800 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
-                        🗑️ Waste
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
-                        🏷️ Clover Sale
-                      </span>
-                    )}
-                  </div>
+                  <span className="batch-stamp">
+                    {LOG_TYPE_LABEL[tx.transaction_type] || tx.transaction_type}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 bg-gray-50/80 rounded-xl p-2.5 text-xs">
+                <div className="grid grid-cols-3 gap-2 bg-[#fafafa] border border-neutral-900/[0.06] rounded-xl p-3 text-xs font-mono tabular-nums">
                   <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Qty</span>
-                    <span className="font-extrabold text-gray-900">{tx.quantity} {tx.unit}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Transition</span>
-                    <span className="font-bold text-gray-700">
-                      {tx.previous_stock !== null && tx.new_stock !== null
-                        ? `${tx.previous_stock} → ${tx.new_stock}`
-                        : 'Updated'}
+                    <span className="font-sans text-[#737373] block">Qty</span>
+                    <span className="font-medium text-[#171717]">
+                      {tx.quantity} {tx.unit}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Impact</span>
+                    <span className="font-sans text-[#737373] block">Stock</span>
+                    <span className="text-[#525252]">
+                      {tx.previous_stock !== null && tx.new_stock !== null
+                        ? `${tx.previous_stock} → ${tx.new_stock}`
+                        : '—'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-sans text-[#737373] block">Impact</span>
                     <span
-                      className={`font-extrabold ${
+                      className={`font-medium ${
                         tx.financialImpact < 0
-                          ? 'text-red-600'
+                          ? 'text-[#b91c1c]'
                           : tx.financialImpact > 0
-                          ? 'text-emerald-700'
-                          : 'text-gray-600'
+                          ? 'text-[#15803d]'
+                          : 'text-[#525252]'
                       }`}
                     >
                       {formatSignedCurrency(tx.financialImpact)}
@@ -450,9 +441,7 @@ export default function ReportsClient({
                 </div>
 
                 {tx.notes && (
-                  <p className="text-[11px] text-gray-600 bg-gray-50/50 rounded-lg px-2.5 py-1.5 border border-gray-100 truncate">
-                    Note: <span className="font-medium text-gray-800">{tx.notes}</span>
-                  </p>
+                  <p className="text-xs text-[#525252] truncate">{tx.notes}</p>
                 )}
               </div>
             )
@@ -460,27 +449,27 @@ export default function ReportsClient({
         )}
       </div>
 
-      {/* Desktop Data Grid */}
-      <div className="hidden md:block bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+      {/* Desktop table */}
+      <div className="hidden md:block surface-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/70 text-gray-600 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
-                <th className="py-3 px-5">Timestamp</th>
-                <th className="py-3 px-4">Log Kind</th>
-                <th className="py-3 px-4">Ingredient</th>
-                <th className="py-3 px-4">Recorded Qty</th>
-                <th className="py-3 px-4">Stock Transition</th>
-                <th className="py-3 px-4">Variance / Impact</th>
-                <th className="py-3 px-5">Notes / Ref</th>
-                <th className="py-3 px-4 text-center">Inspect</th>
+              <tr className="bg-[#fafafa] text-[#737373] text-xs font-medium border-b border-neutral-900/[0.08]">
+                <th className="py-3 px-5 font-medium">Timestamp</th>
+                <th className="py-3 px-4 font-medium">Type</th>
+                <th className="py-3 px-4 font-medium">Ingredient</th>
+                <th className="py-3 px-4 font-medium text-right">Quantity</th>
+                <th className="py-3 px-4 font-medium text-right">Transition</th>
+                <th className="py-3 px-4 font-medium text-right">Impact</th>
+                <th className="py-3 px-5 font-medium">Notes</th>
+                <th className="py-3 px-4 font-medium text-right">Inspect</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-neutral-900/[0.06] text-sm">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-xs text-gray-400">
-                    No transactions match the selected filter criteria.
+                  <td colSpan={8} className="py-8 text-center text-xs text-[#737373]">
+                    No transactions match your filters
                   </td>
                 </tr>
               ) : (
@@ -501,75 +490,77 @@ export default function ReportsClient({
                     <tr
                       key={tx.id}
                       onClick={() => setInspectedTx(tx)}
-                      className="hover:bg-orange-50/30 transition-colors cursor-pointer group"
+                      className="hover:bg-[#fafafa] transition-colors cursor-pointer"
                     >
-                      <td className="py-3 px-5 whitespace-nowrap">
-                        <span className="font-bold text-gray-800 text-xs block">{formattedDate}</span>
-                        <span className="text-[11px] text-gray-400">{formattedTime}</span>
+                      <td className="py-3 px-5 whitespace-nowrap font-mono tabular-nums">
+                        <span
+                          suppressHydrationWarning
+                          className="text-xs font-medium text-[#171717] block"
+                        >
+                          {formattedDate}
+                        </span>
+                        <span
+                          suppressHydrationWarning
+                          className="text-xs text-[#737373]"
+                        >
+                          {formattedTime}
+                        </span>
                       </td>
 
                       <td className="py-3 px-4">
-                        {tx.transaction_type === 'CYCLE_COUNT' ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-800 bg-blue-50 border border-blue-200/80 px-2.5 py-0.5 rounded-md">
-                            <span>📋</span> Audit
-                          </span>
-                        ) : tx.transaction_type === 'RESTOCK' ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-md">
-                            <span>📦</span> Restock
-                          </span>
-                        ) : tx.transaction_type === 'WASTE' ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-800 bg-red-50 border border-red-200/80 px-2.5 py-0.5 rounded-md">
-                            <span>🗑️</span> Waste
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 px-2.5 py-0.5 rounded-md">
-                            <span>🏷️</span> Clover Sale
-                          </span>
-                        )}
+                        <span className="batch-stamp">
+                          {LOG_TYPE_LABEL[tx.transaction_type] || tx.transaction_type}
+                        </span>
                       </td>
 
-                      <td className="py-3 px-4 font-bold text-gray-900 group-hover:text-[#e85d04] transition-colors">
+                      <td className="py-3 px-4 font-medium text-[#171717]">
                         {tx.ingredientName}
                       </td>
 
-                      <td className="py-3 px-4 text-xs font-semibold text-gray-700">
+                      <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-[#525252]">
                         {tx.quantity} {tx.unit}
                       </td>
 
-                      <td className="py-3 px-4 text-xs font-medium text-gray-600">
+                      <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-[#525252]">
                         {tx.previous_stock !== null && tx.new_stock !== null ? (
                           <span>
-                            {tx.previous_stock} → <span className="font-bold text-gray-900">{tx.new_stock}</span> {tx.unit}
+                            {tx.previous_stock} →{' '}
+                            <span className="text-[#171717] font-medium">
+                              {tx.new_stock}
+                            </span>{' '}
+                            {tx.unit}
                           </span>
                         ) : (
-                          <span className="text-gray-400">—</span>
+                          <span className="text-[#a3a3a3]">—</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4">
-                        <div className="flex flex-col gap-0.5">
-                          {tx.transaction_type === 'CYCLE_COUNT' && tx.discrepancy !== null && (
-                            tx.discrepancy === 0 ? (
-                              <span className="inline-flex items-center w-fit text-[11px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-200/60">
-                                ✓ Match
-                              </span>
-                            ) : tx.discrepancy < 0 ? (
-                              <span className="inline-flex items-center w-fit text-[11px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200/60">
-                                {tx.discrepancy.toFixed(2)} {tx.unit}
+                      <td className="py-3 px-4 text-right font-mono text-xs tabular-nums">
+                        <div className="flex flex-col items-end gap-0.5">
+                          {tx.transaction_type === 'CYCLE_COUNT' &&
+                            tx.discrepancy !== null &&
+                            (tx.discrepancy === 0 ? (
+                              <span className="inline-flex items-center gap-1 text-[#15803d]">
+                                <Check size={12} strokeWidth={1.75} />
+                                <span>Match</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center w-fit text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
-                                +{tx.discrepancy.toFixed(2)} {tx.unit}
+                              <span
+                                className={
+                                  tx.discrepancy < 0 ? 'text-[#b91c1c]' : 'text-[#525252]'
+                                }
+                              >
+                                {tx.discrepancy > 0 ? '+' : ''}
+                                {tx.discrepancy.toFixed(2)} {tx.unit}
                               </span>
-                            )
-                          )}
+                            ))}
                           <span
-                            className={`text-xs font-bold ${
+                            className={`font-medium ${
                               tx.financialImpact < 0
-                                ? 'text-red-600'
+                                ? 'text-[#b91c1c]'
                                 : tx.financialImpact > 0
-                                ? 'text-emerald-700'
-                                : 'text-gray-500'
+                                ? 'text-[#15803d]'
+                                : 'text-[#737373]'
                             }`}
                           >
                             {formatSignedCurrency(tx.financialImpact)}
@@ -577,16 +568,20 @@ export default function ReportsClient({
                         </div>
                       </td>
 
-                      <td className="py-3 px-5 text-xs text-gray-600 max-w-xs truncate" title={tx.notes || ''}>
+                      <td
+                        className="py-3 px-5 text-xs text-[#525252] max-w-xs truncate"
+                        title={tx.notes || ''}
+                      >
                         {tx.notes || '—'}
                       </td>
 
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-4 text-right">
                         <button
                           type="button"
-                          className="text-gray-400 group-hover:text-[#e85d04] hover:bg-orange-50 p-1 rounded-lg text-xs font-bold transition-all"
+                          aria-label="Inspect transaction"
+                          className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#737373] hover:text-[#171717] hover:bg-[#f4f4f5] transition-colors"
                         >
-                          🔍
+                          <ArrowUpRight size={15} strokeWidth={1.5} />
                         </button>
                       </td>
                     </tr>
@@ -598,73 +593,78 @@ export default function ReportsClient({
         </div>
       </div>
 
-      {/* INSPECTION MODAL */}
+      {/* Inspection modal */}
       {inspectedTx && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4"
           onClick={() => setInspectedTx(null)}
         >
           <div
-            className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-neutral-900/[0.08] space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+            <div className="flex items-start justify-between pb-3 border-b border-neutral-900/[0.08]">
               <div>
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Log Inspection Record
-                </span>
-                <h3 className="text-lg font-black text-gray-900 mt-0.5">
+                <span className="text-xs text-[#737373]">Log record</span>
+                <h3 className="text-base font-medium text-[#171717] mt-0.5">
                   {inspectedTx.ingredientName}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setInspectedTx(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm font-bold"
+                aria-label="Close"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#737373] hover:text-[#171717] hover:bg-[#f4f4f5]"
               >
-                ✕
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 rounded-2xl p-4">
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-4 bg-[#fafafa] border border-neutral-900/[0.08] rounded-xl p-4">
                 <div>
-                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Log Type</span>
-                  <span className="font-extrabold text-gray-900 text-sm">{inspectedTx.transaction_type}</span>
+                  <span className="text-[#737373] block">Type</span>
+                  <span className="font-medium text-[#171717] text-sm mt-0.5 block">
+                    {LOG_TYPE_LABEL[inspectedTx.transaction_type] ||
+                      inspectedTx.transaction_type}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Recorded Timestamp</span>
-                  <span className="font-semibold text-gray-800 text-xs">
+                  <span className="text-[#737373] block">Timestamp</span>
+                  <span className="font-mono tabular-nums text-[#171717] mt-0.5 block">
                     {formatStoreTimestamp(inspectedTx.created_at, storeTimeZone)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Recorded Quantity</span>
-                  <span className="font-extrabold text-sm text-gray-900">
+                  <span className="text-[#737373] block">Quantity</span>
+                  <span className="font-mono tabular-nums font-medium text-sm text-[#171717] mt-0.5 block">
                     {inspectedTx.quantity} {inspectedTx.unit}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Stock Transition</span>
-                  <span className="font-extrabold text-sm text-gray-900">
-                    {inspectedTx.previous_stock ?? '—'} {inspectedTx.unit} → {inspectedTx.new_stock ?? '—'} {inspectedTx.unit}
+                  <span className="text-[#737373] block">Stock transition</span>
+                  <span className="font-mono tabular-nums font-medium text-sm text-[#171717] mt-0.5 block">
+                    {inspectedTx.previous_stock ?? '—'} → {inspectedTx.new_stock ?? '—'}{' '}
+                    {inspectedTx.unit}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Audit Discrepancy</span>
-                  <span className="font-bold text-gray-900">
-                    {inspectedTx.discrepancy !== null ? `${inspectedTx.discrepancy} ${inspectedTx.unit}` : 'N/A'}
+                  <span className="text-[#737373] block">Discrepancy</span>
+                  <span className="font-mono tabular-nums text-[#171717] mt-0.5 block">
+                    {inspectedTx.discrepancy !== null
+                      ? `${inspectedTx.discrepancy} ${inspectedTx.unit}`
+                      : '—'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Inventory Value Impact</span>
+                  <span className="text-[#737373] block">Value impact</span>
                   <span
-                    className={`font-bold ${
+                    className={`font-mono tabular-nums font-medium mt-0.5 block ${
                       inspectedTx.financialImpact < 0
-                        ? 'text-red-600'
+                        ? 'text-[#b91c1c]'
                         : inspectedTx.financialImpact > 0
-                        ? 'text-emerald-700'
-                        : 'text-gray-900'
+                        ? 'text-[#15803d]'
+                        : 'text-[#171717]'
                     }`}
                   >
                     {formatSignedCurrency(inspectedTx.financialImpact)}
@@ -672,25 +672,25 @@ export default function ReportsClient({
                 </div>
               </div>
 
-              <div className="space-y-1 pt-1">
-                <span className="text-gray-400 uppercase font-bold text-[10px] block">Notes / Reason Recorded</span>
-                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-3 text-gray-800 font-medium">
-                  {inspectedTx.notes || 'No specific note was entered for this action.'}
+              <div className="space-y-1">
+                <span className="text-[#737373] block">Notes</span>
+                <div className="bg-[#fafafa] border border-neutral-900/[0.08] rounded-xl p-3 text-[#171717]">
+                  {inspectedTx.notes || 'No note entered'}
                 </div>
               </div>
 
               {inspectedTx.reference_id && (
                 <div className="space-y-1">
-                  <span className="text-gray-400 uppercase font-bold text-[10px] block">Reference / EOD Batch ID</span>
-                  <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-2.5 font-mono text-[11px] text-gray-700">
+                  <span className="text-[#737373] block">Reference ID</span>
+                  <div className="bg-[#fafafa] border border-neutral-900/[0.08] rounded-xl p-2.5 font-mono text-xs text-[#525252]">
                     {inspectedTx.reference_id}
                   </div>
                 </div>
               )}
 
               <div className="space-y-1">
-                <span className="text-gray-400 uppercase font-bold text-[10px] block">System Transaction UUID</span>
-                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-2.5 font-mono text-[11px] text-gray-500 break-all">
+                <span className="text-[#737373] block">Transaction ID</span>
+                <div className="bg-[#fafafa] border border-neutral-900/[0.08] rounded-xl p-2.5 font-mono text-xs text-[#737373] break-all">
                   {inspectedTx.id}
                 </div>
               </div>
@@ -700,9 +700,9 @@ export default function ReportsClient({
               <button
                 type="button"
                 onClick={() => setInspectedTx(null)}
-                className="bg-gray-900 hover:bg-black text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all"
+                className="h-9 px-4 btn-secondary rounded-xl text-xs font-medium"
               >
-                Close Inspector
+                Close
               </button>
             </div>
           </div>
