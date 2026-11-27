@@ -1,9 +1,11 @@
 // Chè Bông Inventory - PWA Service Worker
-const CACHE_NAME = 'chebong-inventory-v1'
+const CACHE_NAME = 'chebong-inventory-v2'
 
 const PRECACHE_ASSETS = [
   '/',
   '/staff/dashboard',
+  '/staff/stock',
+  '/manager/close-day',
   '/manifest.json',
   '/chebong-bowl.png',
   '/chebong-logo.png',
